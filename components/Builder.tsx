@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, GripVertical, Plus, Trash2, ChevronRight, ChevronLeft, 
-  Sparkles, Save, Monitor, Smartphone, Palette, Globe, Edit2, 
-  X, Smile, Lock, TrendingUp, Layers, Eye, RefreshCw, Eraser
+  Sparkles, Save, Palette, Layers, Eye, Eraser, TrendingUp, Smile, Edit2
 } from 'lucide-react';
 import { Menu, MenuItem, MenuTheme, AiGeneratedItem, PlanTier } from '../types';
 import { Button } from './ui/Button';
@@ -28,7 +27,7 @@ const THEMES: { id: MenuTheme; label: string; color: string }[] = [
 ];
 
 export const Builder: React.FC<BuilderProps> = ({ 
-  menuId, onBack, onSave, initialData, currentPlan, onUpgrade 
+  menuId, onBack, onSave, initialData, currentPlan 
 }) => {
   // --- State ---
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
@@ -79,6 +78,8 @@ export const Builder: React.FC<BuilderProps> = ({
   
   const handleResetDemo = () => {
      setItems([]);
+     setName('New Menu');
+     setTheme('glass');
      setShowDemoGuide(false);
   };
 
@@ -120,7 +121,7 @@ export const Builder: React.FC<BuilderProps> = ({
 
       generated.forEach(root => processNode(root, 0));
       setItems(newItems);
-      setActiveTab('preview'); // Auto switch to see result
+      setActiveTab('preview'); 
     } catch (e) {
       alert('AI Generation failed. Please try again.');
     } finally {
@@ -141,43 +142,43 @@ export const Builder: React.FC<BuilderProps> = ({
     }
   };
 
-  // --- Render Helpers ---
+  // --- Render ---
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative">
+    <div className="h-screen w-full flex flex-col bg-slate-50 overflow-hidden">
       
-      {/* Top Bar - Simplified & Sticky */}
-      <div className="h-16 px-4 md:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-30">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
+      {/* Top Bar - Responsive Layout */}
+      <div className="h-16 px-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-30 shadow-sm relative">
+        <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <input 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="font-serif font-bold text-lg text-slate-900 bg-transparent outline-none placeholder:text-slate-300 w-full md:w-64"
+              className="font-serif font-bold text-lg text-slate-900 bg-transparent outline-none placeholder:text-slate-300 w-full md:w-64 truncate focus:ring-0 p-0 border-none"
               placeholder="Menu Name"
             />
-            <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase hidden md:inline-block">
+            <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase truncate hidden sm:inline-block">
               {items.length} Items • {theme} Theme
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
            {/* Desktop View Switcher */}
-           <div className="hidden md:flex bg-slate-100 p-1 rounded-xl mr-4">
+           <div className="hidden md:flex bg-slate-100 p-1 rounded-xl mr-2">
               <button 
                 onClick={() => setActiveTab('editor')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Editor
               </button>
               <button 
                 onClick={() => setActiveTab('preview')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Preview
               </button>
@@ -188,7 +189,7 @@ export const Builder: React.FC<BuilderProps> = ({
              onClick={handleSave} 
              className="hidden md:flex rounded-xl"
            >
-             <Save className="w-4 h-4 mr-2" /> Save Changes
+             <Save className="w-4 h-4 mr-2" /> Save
            </Button>
 
            {/* Mobile Save Icon */}
@@ -198,16 +199,16 @@ export const Builder: React.FC<BuilderProps> = ({
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Split View / Tabs */}
       <div className="flex-1 overflow-hidden relative flex">
         
         {/* Editor Pane */}
         <div className={`
-          flex-1 h-full overflow-y-auto bg-slate-50 transition-transform duration-500 ease-in-out absolute md:relative w-full z-10
-          ${activeTab === 'editor' ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          md:border-r border-slate-200
+          flex-1 h-full overflow-y-auto bg-slate-50 transition-transform duration-300 ease-in-out 
+          ${activeTab === 'editor' ? 'translate-x-0' : '-translate-x-full absolute w-full'}
+          md:translate-x-0 md:relative md:w-2/5 lg:w-1/3 md:border-r border-slate-200 z-10
         `}>
-          <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8 pb-32 md:pb-8">
+          <div className="p-4 md:p-6 pb-24 md:pb-8 max-w-2xl mx-auto space-y-6 md:space-y-8">
 
             {/* Demo Guide Banner */}
             <AnimatePresence>
@@ -222,9 +223,9 @@ export const Builder: React.FC<BuilderProps> = ({
                     <Sparkles className="w-24 h-24 rotate-12" />
                   </div>
                   <div className="relative z-10">
-                    <h3 className="text-xl font-serif font-bold mb-2">Welcome to the Builder</h3>
+                    <h3 className="text-xl font-serif font-bold mb-2">Builder Guide</h3>
                     <p className="text-indigo-200 text-sm mb-6 max-w-md">
-                      This is a sample menu to show you the possibilities. You can customize it, or clear everything to start your own creation.
+                      Customize this sample or start fresh.
                     </p>
                     <div className="flex gap-3">
                       <Button 
@@ -233,7 +234,7 @@ export const Builder: React.FC<BuilderProps> = ({
                         onClick={handleResetDemo}
                         className="bg-white text-indigo-900 border-none hover:bg-indigo-50"
                       >
-                        <Eraser className="w-4 h-4 mr-2" /> Start Fresh (Clear)
+                        <Eraser className="w-4 h-4 mr-2" /> Clear
                       </Button>
                       <Button 
                         size="sm" 
@@ -241,7 +242,7 @@ export const Builder: React.FC<BuilderProps> = ({
                         onClick={() => setShowDemoGuide(false)}
                         className="text-indigo-200 hover:text-white hover:bg-white/10"
                       >
-                        Use Template
+                        Close
                       </Button>
                     </div>
                   </div>
@@ -250,8 +251,8 @@ export const Builder: React.FC<BuilderProps> = ({
             </AnimatePresence>
             
             {/* AI Generator Section */}
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-5 md:p-6 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden group">
+               <div className="absolute -top-4 -right-4 p-8 opacity-10 pointer-events-none group-hover:rotate-12 transition-transform duration-700">
                  <Sparkles className="w-32 h-32" />
                </div>
                
@@ -260,38 +261,36 @@ export const Builder: React.FC<BuilderProps> = ({
                    <Sparkles className="w-4 h-4" />
                    <span className="text-xs font-bold uppercase tracking-widest">AI Architect</span>
                  </div>
-                 <h2 className="text-2xl font-serif font-bold mb-4">Generate structure instantly.</h2>
+                 <h2 className="text-xl md:text-2xl font-serif font-bold mb-4 leading-tight">Generate structure instantly.</h2>
                  
-                 <div className="flex gap-2">
+                 <div className="flex flex-col gap-3">
                    <input 
                      value={prompt}
                      onChange={(e) => setPrompt(e.target.value)}
-                     placeholder="e.g. Italian fine dining dinner menu..."
-                     className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 backdrop-blur-sm"
+                     placeholder="e.g. Modern Japanese Lunch..."
+                     className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 backdrop-blur-sm transition-all"
                    />
-                   <Button 
-                     variant="secondary" 
-                     onClick={handleGenerate} 
-                     isLoading={isGenerating}
-                     className="bg-white text-indigo-900 border-none hover:bg-indigo-50"
-                   >
-                     Create
-                   </Button>
-                 </div>
-                 
-                 {/* Optimization Tools */}
-                 {items.length > 0 && (
-                   <div className="mt-4 pt-4 border-t border-white/10 flex gap-4">
-                     <button 
-                       onClick={handleOptimize}
-                       disabled={isOptimizing}
-                       className="flex items-center gap-2 text-xs font-medium text-indigo-100 hover:text-white transition-colors"
-                     >
-                       {isOptimizing ? <span className="animate-spin">⌛</span> : <TrendingUp className="w-3 h-3" />}
-                       Optimize UX
-                     </button>
+                   <div className="flex gap-2">
+                    <Button 
+                      variant="secondary" 
+                      onClick={handleGenerate} 
+                      isLoading={isGenerating}
+                      className="bg-white text-indigo-900 border-none hover:bg-indigo-50 w-full justify-center"
+                    >
+                      Create Menu
+                    </Button>
+                    {items.length > 0 && (
+                      <button 
+                        onClick={handleOptimize}
+                        disabled={isOptimizing}
+                        className="px-4 py-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+                        title="Optimize Order"
+                      >
+                        {isOptimizing ? <span className="animate-spin block">⌛</span> : <TrendingUp className="w-5 h-5" />}
+                      </button>
+                    )}
                    </div>
-                 )}
+                 </div>
                </div>
             </div>
 
@@ -306,12 +305,12 @@ export const Builder: React.FC<BuilderProps> = ({
                     key={t.id}
                     onClick={() => setTheme(t.id)}
                     className={`
-                      relative p-3 rounded-xl border-2 text-left transition-all duration-200 group overflow-hidden
-                      ${theme === t.id ? 'border-indigo-600 ring-1 ring-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'}
+                      relative p-3 rounded-xl border text-left transition-all duration-200 group overflow-hidden flex flex-col items-center justify-center gap-2
+                      ${theme === t.id ? 'border-indigo-600 ring-1 ring-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-md'}
                     `}
                   >
-                    <div className={`w-full h-8 ${t.color} rounded-lg mb-2 border border-black/5 shadow-sm`} />
-                    <span className={`text-xs font-bold block ${theme === t.id ? 'text-indigo-900' : 'text-slate-600'}`}>{t.label}</span>
+                    <div className={`w-8 h-8 rounded-full ${t.color} border border-black/5 shadow-sm`} />
+                    <span className={`text-[10px] md:text-xs font-bold block ${theme === t.id ? 'text-indigo-900' : 'text-slate-600'}`}>{t.label}</span>
                   </button>
                 ))}
               </div>
@@ -319,7 +318,7 @@ export const Builder: React.FC<BuilderProps> = ({
 
             {/* Items List */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between sticky top-0 bg-slate-50 py-2 z-10">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                    <Layers className="w-3 h-3" /> Menu Items
                 </label>
@@ -331,7 +330,7 @@ export const Builder: React.FC<BuilderProps> = ({
                       variant="ghost" 
                       onClick={handleClearAll}
                       className="text-slate-400 hover:text-red-500 hover:bg-red-50"
-                      title="Clear All (Reset)"
+                      title="Clear All"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -342,10 +341,10 @@ export const Builder: React.FC<BuilderProps> = ({
                 </div>
               </div>
 
-              <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
+              <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2 pb-20">
                 {items.length === 0 && (
                   <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
-                    <p className="text-slate-400 text-sm">List is empty. Add items or use AI.</p>
+                    <p className="text-slate-400 text-sm">List is empty.</p>
                   </div>
                 )}
 
@@ -383,26 +382,24 @@ export const Builder: React.FC<BuilderProps> = ({
                            </div>
 
                            <div 
-                             className="flex-1 cursor-pointer" 
+                             className="flex-1 cursor-pointer min-w-0" 
                              onClick={() => setEditingItem(editingItem === item.id ? null : item.id)}
                            >
-                             <div className="font-medium text-sm text-slate-900">{item.label}</div>
-                             <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{item.url}</div>
+                             <div className="font-medium text-sm text-slate-900 truncate">{item.label}</div>
+                             <div className="text-[10px] text-slate-400 font-mono truncate">{item.url}</div>
                            </div>
 
                            {/* Depth Controls */}
-                           <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-100">
+                           <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-100 shrink-0">
                               <button 
                                 onClick={() => updateItem(item.id, { depth: 0 })}
                                 className={`p-1.5 rounded-md transition-all ${item.depth === 0 ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-                                title="Root Item"
                               >
                                 <ChevronLeft className="w-3 h-3" />
                               </button>
                               <button 
                                 onClick={() => updateItem(item.id, { depth: 1 })}
                                 className={`p-1.5 rounded-md transition-all ${item.depth === 1 ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-                                title="Child Item"
                               >
                                 <ChevronRight className="w-3 h-3" />
                               </button>
@@ -410,7 +407,7 @@ export const Builder: React.FC<BuilderProps> = ({
 
                            <button 
                              onClick={() => deleteItem(item.id)}
-                             className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                             className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                            >
                              <Trash2 className="w-4 h-4" />
                            </button>
@@ -425,7 +422,7 @@ export const Builder: React.FC<BuilderProps> = ({
                                exit={{ height: 0, opacity: 0 }}
                                className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-4"
                              >
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>
                                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Label</label>
                                     <input 
@@ -457,7 +454,7 @@ export const Builder: React.FC<BuilderProps> = ({
 
         {/* Preview Pane */}
         <div className={`
-          absolute md:relative inset-0 md:inset-auto w-full md:w-1/2 lg:w-3/5 h-full bg-slate-100 transition-transform duration-500 ease-in-out z-20
+          absolute md:relative inset-0 w-full md:w-3/5 lg:w-2/3 h-full bg-slate-100 transition-transform duration-300 ease-in-out z-20 md:z-auto
           ${activeTab === 'preview' ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
            <div className="h-full w-full overflow-hidden shadow-[inset_10px_0_20px_-10px_rgba(0,0,0,0.1)] border-l border-slate-200/50">

@@ -116,6 +116,10 @@ const App: React.FC = () => {
      }
   };
 
+  const handleRestoreDemo = () => {
+    setMenus([DEMO_MENU]);
+  };
+
   // Auth Handlers
   const handleDevUnlock = () => {
     localStorage.setItem(DEV_AUTH_KEY, 'true');
@@ -153,6 +157,7 @@ const App: React.FC = () => {
               onDelete={handleDelete}
               currentPlan={currentPlan}
               onUpgrade={handleUpgrade}
+              onRestoreDemo={handleRestoreDemo}
             />
           )}
         </>

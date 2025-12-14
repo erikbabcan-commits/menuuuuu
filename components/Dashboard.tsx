@@ -15,6 +15,7 @@ interface DashboardProps {
   onDelete: (id: string) => void;
   currentPlan: PlanTier;
   onUpgrade: () => void;
+  onRestoreDemo?: () => void;
 }
 
 const containerVariants = {
@@ -33,7 +34,7 @@ const itemVariants = {
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
-  menus, onCreate, onEdit, currentPlan, onUpgrade 
+  menus, onCreate, onEdit, currentPlan, onUpgrade, onRestoreDemo 
 }) => {
   
   const planDetails = PLAN_CONFIG[currentPlan];
@@ -46,21 +47,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const storagePercent = storageLimit === 'unlimited' || storageLimit === 0 ? 0 : (storageUsed / storageLimit) * 100;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100">
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 pb-20">
       
       {/* Floating Glass Header */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky top-4 z-40 px-4 md:px-6 mb-8"
+        className="sticky top-0 z-40 px-4 md:px-6 pt-4 pb-2"
       >
-        <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-2xl p-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-2xl p-3 md:p-4 flex items-center justify-between transition-all">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
+             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
                <span className="font-serif font-bold text-lg">G</span>
              </div>
              <div className="flex flex-col">
-                <span className="font-serif font-bold text-slate-900 tracking-tight leading-none">Gastro OS</span>
+                <span className="font-serif font-bold text-slate-900 tracking-tight leading-none text-sm md:text-base">Gastro OS</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
                    Workspace
                 </span>
@@ -70,7 +71,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
              </span>
           </div>
 
-          <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex items-center gap-2 md:gap-6">
             {/* Stats (Desktop) */}
             {storageLimit !== 0 && (
               <div className="hidden md:flex flex-col gap-1 w-32">
@@ -103,17 +104,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pb-24">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-8">
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10 pl-2"
+          className="mb-8 md:mb-10 pl-2"
         >
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-2">
+          <h1 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 mb-2">
             Good Morning.
           </h1>
-          <p className="text-slate-500 text-lg max-w-2xl leading-relaxed">
+          <p className="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed">
             Your digital ecosystem is active. 
             {nextPlan && <span className="text-indigo-600 font-medium cursor-pointer hover:underline" onClick={onUpgrade}> Unlock AI features</span>}
           </p>
@@ -144,13 +145,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                    </Button>
                  </div>
                  
-                 <h3 className="text-2xl font-serif font-bold text-slate-900 mb-2">Digital Menus</h3>
+                 <h3 className="text-xl md:text-2xl font-serif font-bold text-slate-900 mb-2">Digital Menus</h3>
                  <p className="text-slate-500 text-sm mb-6 max-w-sm">Manage your restaurant's offerings with our AI architect. Drag, drop, and publish.</p>
                  
                  <div className="space-y-3 mt-auto">
                    {menus.length === 0 ? (
-                     <div className="text-center py-8 border-2 border-dashed border-slate-100 rounded-2xl">
+                     <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col items-center justify-center gap-4">
                         <p className="text-slate-400 text-sm">No menus created yet.</p>
+                        {onRestoreDemo && (
+                          <Button variant="ghost" size="sm" onClick={onRestoreDemo} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100">
+                             <Sparkles className="w-4 h-4 mr-2" /> Restore Demo Data
+                          </Button>
+                        )}
                      </div>
                    ) : (
                      menus.slice(0, 3).map(menu => (
@@ -162,7 +168,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         >
                           <div className="flex items-center gap-3">
                              <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                             <span className="font-bold text-slate-700">{menu.name}</span>
+                             <span className="font-bold text-slate-700 truncate max-w-[120px] sm:max-w-xs">{menu.name}</span>
                           </div>
                           <div className="p-2 bg-white rounded-full text-slate-300 group-hover/item:text-indigo-600 transition-colors">
                             <Edit2 className="w-4 h-4" />
@@ -276,7 +282,7 @@ const ModuleCard: React.FC<{
   return (
     <motion.div 
       variants={itemVariants}
-      className={`relative bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
+      className={`relative bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-h-[220px]`}
     >
       
       {isLocked && (
