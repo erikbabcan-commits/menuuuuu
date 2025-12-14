@@ -3,6 +3,7 @@ import { Menu, MenuItem } from '../types';
 import { Menu as MenuIcon, X, ChevronDown, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { iconMap } from '../utils/icons';
+import { themeStyles } from '../utils/themeStyles';
 
 interface MenuPreviewProps {
   menu: Menu;
@@ -28,29 +29,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
     return roots;
   }, [menu.items]);
 
-  const themeClasses = {
-    glass: "bg-white/70 backdrop-blur-2xl border-b border-white/20 text-slate-900 shadow-sm supports-[backdrop-filter]:bg-white/40",
-    dark: "bg-slate-950/95 backdrop-blur-xl text-white border-b border-white/5 shadow-2xl",
-    light: "bg-white/95 backdrop-blur-xl text-slate-900 border-b border-slate-100 shadow-sm"
-  };
-
-  const dropdownClasses = {
-    glass: "bg-white/80 backdrop-blur-2xl border border-white/40 text-slate-900 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)]",
-    dark: "bg-slate-900 border border-slate-800 text-slate-100 shadow-2xl",
-    light: "bg-white border border-slate-100 text-slate-900 shadow-xl"
-  };
-
-  const mobileMenuClasses = {
-    glass: "bg-white/95 backdrop-blur-2xl",
-    dark: "bg-slate-950",
-    light: "bg-white"
-  };
-
-  const heroTextClasses = {
-    glass: "text-slate-800",
-    dark: "text-white",
-    light: "text-slate-900"
-  };
+  const currentTheme = themeStyles[menu.theme] || themeStyles.glass;
 
   // Animation Variants
   const dropdownVariants: Variants = {
@@ -122,7 +101,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className={`space-y-6 max-w-2xl ${heroTextClasses[menu.theme]}`}
+          className={`space-y-6 max-w-2xl ${currentTheme.heroText}`}
         >
           <div className="inline-block px-3 py-1 rounded-full border border-current opacity-30 text-xs font-bold tracking-widest uppercase mb-4">
             Collection 2025
@@ -146,7 +125,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className={`absolute top-0 left-0 right-0 z-50 transition-colors duration-500 ${themeClasses[menu.theme]}`}
+        className={`absolute top-0 left-0 right-0 z-50 transition-colors duration-500 ${currentTheme.nav}`}
       >
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo */}
@@ -190,7 +169,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                           initial="hidden"
                           animate="visible"
                           exit="exit"
-                          className={`absolute top-full left-0 mt-2 w-56 rounded-2xl py-3 origin-top-left overflow-hidden ${dropdownClasses[menu.theme]}`}
+                          className={`absolute top-full left-0 mt-2 w-56 rounded-2xl py-3 origin-top-left overflow-hidden ${currentTheme.dropdown}`}
                         >
                           {item.children.map((child) => {
                              const ChildIcon = child.icon && iconMap[child.icon] ? iconMap[child.icon] : null;
@@ -240,7 +219,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`md:hidden absolute top-20 left-0 right-0 overflow-y-auto ${mobileMenuClasses[menu.theme]}`}
+              className={`md:hidden absolute top-20 left-0 right-0 overflow-y-auto ${currentTheme.mobileMenu}`}
             >
               <div className="flex flex-col space-y-4 p-8">
                 {menu.items.map((item) => {

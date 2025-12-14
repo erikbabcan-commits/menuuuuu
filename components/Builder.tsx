@@ -125,10 +125,10 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
   const NewItemIconComp = newItemIcon && iconMap[newItemIcon] ? iconMap[newItemIcon] : Smile;
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] bg-slate-50 overflow-hidden">
       
       {/* Sidebar / Editor */}
-      <div className="w-full md:w-[480px] bg-white border-r border-slate-200 flex flex-col h-full shadow-2xl z-20 shrink-0">
+      <div className="w-full md:w-[480px] bg-white border-r border-slate-200 flex flex-col h-1/2 md:h-full shadow-2xl z-20 shrink-0">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 flex items-center gap-4 bg-white shrink-0">
           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 hover:text-slate-900">
@@ -149,7 +149,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide pb-40">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide pb-20 md:pb-40">
           
           {/* Theme Selector */}
           <div className="space-y-4">
@@ -324,7 +324,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 bg-slate-100 relative flex flex-col min-h-[500px]">
+      <div className="flex-1 bg-slate-100 relative flex flex-col h-1/2 md:h-full overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#475569_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
@@ -346,13 +346,13 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
           </button>
         </div>
 
-        {/* Device Frame */}
-        <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-hidden relative z-10">
+        {/* Device Frame Container - Scrollable if content too tall on mobile */}
+        <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-auto relative z-10 w-full h-full">
           <div 
             className={`
               transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-white shadow-[0_50px_100px_-20px_rgba(50,50,93,0.25),0_30px_60px_-30px_rgba(0,0,0,0.3)] overflow-hidden relative border-slate-900/5
               ${viewMode === 'mobile' 
-                ? 'w-[375px] h-[750px] rounded-[3.5rem] border-[12px] border-slate-900 ring-4 ring-slate-900/10' 
+                ? 'w-[375px] h-[750px] max-w-full max-h-[85vh] rounded-[3.5rem] border-[12px] border-slate-900 ring-4 ring-slate-900/10' 
                 : 'w-[95%] h-[90%] rounded-2xl border border-slate-200/50'}
             `}
           >
