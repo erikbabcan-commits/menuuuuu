@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Reorder } from 'framer-motion';
-import { ArrowLeft, GripVertical, Plus, Trash2, ChevronRight, ChevronLeft, Sparkles, Save, Monitor, Smartphone, Palette, Globe } from 'lucide-react';
+import { ArrowLeft, GripVertical, Plus, Trash2, ChevronRight, ChevronLeft, Sparkles, Save, Monitor, Smartphone, Palette, Globe, Edit2, X, Smile } from 'lucide-react';
 import { Menu, MenuItem, MenuTheme, AiGeneratedItem } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
 import { generateMenuStructure } from '../services/geminiService';
+import { IconPicker } from './IconPicker';
+import { iconMap } from '../utils/icons';
 
 interface BuilderProps {
   menuId: string | null;
@@ -27,6 +29,12 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
   // New Item State
   const [newItemLabel, setNewItemLabel] = useState('');
   const [newItemUrl, setNewItemUrl] = useState('#');
+  const [newItemIcon, setNewItemIcon] = useState('');
+  const [isAddIconPickerOpen, setIsAddIconPickerOpen] = useState(false);
+
+  // Edit Item State
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
 
   const handleAddItem = () => {
     if (!newItemLabel) return;
@@ -34,11 +42,21 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
       id: Date.now().toString(),
       label: newItemLabel,
       url: newItemUrl,
-      depth: 0
+      depth: 0,
+      icon: newItemIcon || undefined
     };
     setItems([...items, newItem]);
     setNewItemLabel('');
     setNewItemUrl('#');
+    setNewItemIcon('');
+    setIsAddIconPickerOpen(false);
+  };
+
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    setItems(items.map(i => i.id === editingItem.id ? editingItem : i));
+    setEditingItem(null);
+    setIsEditIconPickerOpen(false);
   };
 
   const handleDeleteItem = (id: string) => {
@@ -104,6 +122,8 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     onSave(menu);
   };
 
+  const NewItemIconComp = newItemIcon && iconMap[newItemIcon] ? iconMap[newItemIcon] : Smile;
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-slate-50 overflow-hidden">
       
@@ -129,7 +149,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide pb-40">
           
           {/* Theme Selector */}
           <div className="space-y-4">
@@ -186,51 +206,67 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
             </div>
             
             <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-3">
-              {items.map((item, index) => (
-                <Reorder.Item key={item.id} value={item} className="relative">
-                  <div 
-                    className={`
-                      group flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md hover:border-slate-300
-                      ${item.depth > 0 ? 'ml-6 border-l-4 border-l-slate-300 bg-slate-50/50' : ''}
-                    `}
-                  >
-                    <div className="p-1 rounded cursor-move hover:bg-slate-100 text-slate-300 hover:text-slate-500 transition-colors">
-                       <GripVertical className="w-4 h-4" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-800 text-sm truncate tracking-tight">{item.label}</div>
-                      <div className="text-xs text-slate-400 truncate font-mono mt-0.5">{item.url}</div>
-                    </div>
+              {items.map((item, index) => {
+                const ItemIcon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : null;
+                return (
+                  <Reorder.Item key={item.id} value={item} className="relative">
+                    <div 
+                      className={`
+                        group flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md hover:border-slate-300
+                        ${item.depth > 0 ? 'ml-6 border-l-4 border-l-slate-300 bg-slate-50/50' : ''}
+                      `}
+                    >
+                      <div className="p-1 rounded cursor-move hover:bg-slate-100 text-slate-300 hover:text-slate-500 transition-colors">
+                         <GripVertical className="w-4 h-4" />
+                      </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white pl-2 shadow-[-10px_0_10px_rgba(255,255,255,0.8)]">
-                      <button 
-                        onClick={() => handleIndent(index, 'out')}
-                        disabled={item.depth === 0}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
-                        title="Outdent"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => handleIndent(index, 'in')}
-                        disabled={item.depth === 1 || index === 0 || items[index - 1].depth === 1}
-                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
-                        title="Indent"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-slate-400 transition-colors ml-1"
-                        title="Remove"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {ItemIcon && (
+                        <div className="p-1.5 bg-slate-100 rounded-md text-slate-500">
+                          <ItemIcon className="w-4 h-4" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 text-sm truncate tracking-tight">{item.label}</div>
+                        <div className="text-xs text-slate-400 truncate font-mono mt-0.5">{item.url}</div>
+                      </div>
+
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity bg-white pl-2 shadow-[-10px_0_10px_rgba(255,255,255,0.8)]">
+                         <button 
+                          onClick={() => setEditingItem(item)}
+                          className="p-1.5 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-400 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleIndent(index, 'out')}
+                          disabled={item.depth === 0}
+                          className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
+                          title="Outdent"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleIndent(index, 'in')}
+                          disabled={item.depth === 1 || index === 0 || items[index - 1].depth === 1}
+                          className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 disabled:opacity-20 transition-colors"
+                          title="Indent"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-lg text-slate-400 transition-colors ml-1"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </Reorder.Item>
-              ))}
+                  </Reorder.Item>
+                );
+              })}
             </Reorder.Group>
 
             {items.length === 0 && (
@@ -242,26 +278,44 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
           </div>
 
           {/* Add Item Form */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-3 sticky bottom-0 shadow-lg">
-             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">Add Link</h4>
-            <input
-              type="text"
-              placeholder="Label (e.g., Services)"
-              className="w-full text-sm px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors bg-white"
-              value={newItemLabel}
-              onChange={e => setNewItemLabel(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddItem()}
-            />
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-3 sticky bottom-0 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] z-10">
+             <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">Add Link</h4>
+             </div>
             <div className="flex gap-2">
+               <div className="relative">
+                  <button 
+                    onClick={() => setIsAddIconPickerOpen(!isAddIconPickerOpen)}
+                    className={`h-10 w-10 flex items-center justify-center rounded-lg border transition-colors ${newItemIcon ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                    title="Select Icon"
+                  >
+                     <NewItemIconComp className="w-5 h-5" />
+                  </button>
+                  <IconPicker 
+                    isOpen={isAddIconPickerOpen} 
+                    onClose={() => setIsAddIconPickerOpen(false)}
+                    selectedIcon={newItemIcon}
+                    onSelect={setNewItemIcon}
+                    placement="top"
+                  />
+               </div>
               <input
                 type="text"
-                placeholder="URL (e.g., /services)"
-                className="flex-1 text-sm px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors bg-white font-mono text-xs"
+                placeholder="Label"
+                className="flex-[2] text-sm px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors bg-white"
+                value={newItemLabel}
+                onChange={e => setNewItemLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddItem()}
+              />
+              <input
+                type="text"
+                placeholder="URL"
+                className="flex-[1] text-sm px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors bg-white font-mono text-xs"
                 value={newItemUrl}
                 onChange={e => setNewItemUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddItem()}
               />
-              <Button size="sm" onClick={handleAddItem} disabled={!newItemLabel} className="h-full aspect-square !px-0 flex items-center justify-center">
+              <Button size="sm" onClick={handleAddItem} disabled={!newItemLabel} className="h-10 w-10 !px-0 flex items-center justify-center shrink-0">
                 <Plus className="w-5 h-5" />
               </Button>
             </div>
@@ -341,6 +395,66 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                 <Sparkles className="w-4 h-4 mr-2" /> Generate Structure
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="font-serif text-xl font-bold text-slate-900">Edit Link</h3>
+               <button onClick={() => setEditingItem(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                 <X className="w-5 h-5" />
+               </button>
+             </div>
+
+             <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Icon</label>
+                  <div className="relative inline-block">
+                    <button 
+                      onClick={() => setIsEditIconPickerOpen(!isEditIconPickerOpen)}
+                      className="h-12 w-12 flex items-center justify-center rounded-xl border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    >
+                      {editingItem.icon && iconMap[editingItem.icon] 
+                        ? React.createElement(iconMap[editingItem.icon], { className: "w-6 h-6" }) 
+                        : <Smile className="w-6 h-6 text-slate-300" />}
+                    </button>
+                    <IconPicker 
+                      isOpen={isEditIconPickerOpen} 
+                      onClose={() => setIsEditIconPickerOpen(false)}
+                      selectedIcon={editingItem.icon}
+                      onSelect={(icon) => setEditingItem({...editingItem, icon})}
+                      placement="bottom"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Label</label>
+                   <input 
+                      value={editingItem.label}
+                      onChange={e => setEditingItem({...editingItem, label: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+                   />
+                </div>
+
+                <div>
+                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">URL</label>
+                   <input 
+                      value={editingItem.url}
+                      onChange={e => setEditingItem({...editingItem, url: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-mono text-sm"
+                   />
+                </div>
+             </div>
+
+             <div className="flex justify-end gap-3 mt-8">
+               <Button variant="ghost" onClick={() => setEditingItem(null)}>Cancel</Button>
+               <Button onClick={handleUpdateItem} className="px-6 bg-slate-900 text-white">Save Changes</Button>
+             </div>
           </div>
         </div>
       )}

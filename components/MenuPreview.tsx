@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Menu, MenuItem } from '../types';
 import { Menu as MenuIcon, X, ChevronDown, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { iconMap } from '../utils/icons';
 
 interface MenuPreviewProps {
   menu: Menu;
@@ -8,6 +10,7 @@ interface MenuPreviewProps {
 
 export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   // Group items into parent-child structure for rendering
   const structure = React.useMemo(() => {
@@ -49,14 +52,75 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
     light: "text-slate-900"
   };
 
+  // Animation Variants
+  const dropdownVariants: Variants = {
+    hidden: { 
+      opacity: 0, 
+      y: 10, 
+      scale: 0.95,
+      transition: { duration: 0.15 }
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: { 
+        duration: 0.2, 
+        ease: "easeOut",
+        staggerChildren: 0.05,
+        delayChildren: 0.05
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: 8, 
+      scale: 0.98,
+      transition: { duration: 0.15 }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2 } }
+  };
+
+  const mobileContainerVariants: Variants = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { 
+      opacity: 1, 
+      height: "calc(100vh - 5rem)",
+      transition: { 
+        duration: 0.4, 
+        ease: [0.22, 1, 0.36, 1],
+        staggerChildren: 0.08,
+        delayChildren: 0.1
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      height: 0,
+      transition: { duration: 0.3, ease: "easeInOut" } 
+    }
+  };
+
+  const mobileItemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
+  };
+
   return (
-    <div className="w-full h-full relative overflow-hidden bg-slate-100 font-sans">
+    <div className="w-full h-full relative overflow-hidden bg-slate-100 font-sans select-none">
       {/* Background with Mesh Gradient for Premium Feel */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-slate-100 to-emerald-50 opacity-80" />
       
       {/* Mock Website Content - Hero Section */}
       <div className="absolute inset-0 pt-24 px-8 md:px-12 flex flex-col items-center justify-center text-center pointer-events-none select-none">
-        <div className={`space-y-6 max-w-2xl transform transition-all duration-700 ease-out ${heroTextClasses[menu.theme]}`}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className={`space-y-6 max-w-2xl ${heroTextClasses[menu.theme]}`}
+        >
           <div className="inline-block px-3 py-1 rounded-full border border-current opacity-30 text-xs font-bold tracking-widest uppercase mb-4">
             Collection 2025
           </div>
@@ -71,50 +135,84 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
             <div className="h-12 w-40 bg-current opacity-10 rounded-full" />
             <div className="h-12 w-40 border border-current opacity-20 rounded-full" />
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* The Menu */}
-      <nav className={`absolute top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${themeClasses[menu.theme]}`}>
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className={`absolute top-0 left-0 right-0 z-50 transition-colors duration-500 ${themeClasses[menu.theme]}`}
+      >
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo */}
-          <div className="font-serif font-bold text-2xl tracking-tighter flex items-center gap-2">
+          <div className="font-serif font-bold text-2xl tracking-tighter flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 bg-current rounded-full opacity-20" />
             {menu.name || 'Luxe.'}
           </div>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-2">
-            {structure.map((item) => (
-              <div key={item.id} className="relative group perspective-1000">
-                <a 
-                  href={item.url} 
-                  className="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 hover:bg-current hover:bg-opacity-5 flex items-center gap-1.5 tracking-wide opacity-90 hover:opacity-100"
-                >
-                  {item.label}
-                  {item.children.length > 0 && <ChevronDown className="w-3 h-3 opacity-50 transition-transform group-hover:rotate-180" />}
-                </a>
-                
-                {/* Dropdown */}
-                {item.children.length > 0 && (
-                  <div className={`absolute top-full left-0 mt-2 w-56 rounded-2xl py-3 opacity-0 invisible -translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300 origin-top-left z-50 ${dropdownClasses[menu.theme]}`}>
-                    {item.children.map((child, idx) => (
-                      <a 
-                        key={child.id}
-                        href={child.url}
-                        className="flex items-center justify-between px-6 py-2.5 text-sm hover:opacity-60 transition-all duration-200 group/link"
-                        style={{ transitionDelay: `${idx * 50}ms` }}
-                      >
-                        {child.label}
-                        <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover/link:opacity-100 group-hover/link:translate-x-0 transition-all duration-200" />
-                      </a>
-                    ))}
+            {structure.map((item) => {
+               const ItemIcon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : null;
+               return (
+                  <div 
+                    key={item.id} 
+                    className="relative"
+                    onMouseEnter={() => setHoveredItem(item.id)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                  >
+                    <a 
+                      href={item.url} 
+                      className="relative px-5 py-2.5 rounded-full text-sm font-medium transition-colors duration-300 flex items-center gap-2 tracking-wide opacity-90 hover:opacity-100 hover:bg-current hover:bg-opacity-5"
+                    >
+                      {ItemIcon && <ItemIcon className="w-4 h-4 opacity-70" />}
+                      {item.label}
+                      {item.children.length > 0 && (
+                        <motion.div
+                          animate={{ rotate: hoveredItem === item.id ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className="w-3 h-3 opacity-50" />
+                        </motion.div>
+                      )}
+                    </a>
+                    
+                    {/* Dropdown with AnimatePresence */}
+                    <AnimatePresence>
+                      {item.children.length > 0 && hoveredItem === item.id && (
+                        <motion.div
+                          variants={dropdownVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          className={`absolute top-full left-0 mt-2 w-56 rounded-2xl py-3 origin-top-left overflow-hidden ${dropdownClasses[menu.theme]}`}
+                        >
+                          {item.children.map((child) => {
+                             const ChildIcon = child.icon && iconMap[child.icon] ? iconMap[child.icon] : null;
+                             return (
+                              <motion.a 
+                                key={child.id}
+                                href={child.url}
+                                variants={itemVariants}
+                                className="flex items-center justify-between px-6 py-2.5 text-sm hover:opacity-60 transition-opacity group/link"
+                              >
+                                <span className="flex items-center gap-3">
+                                   {ChildIcon && <ChildIcon className="w-4 h-4 opacity-50" />}
+                                   {child.label}
+                                </span>
+                                <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover/link:opacity-100 group-hover/link:translate-x-0 transition-transform duration-200" />
+                              </motion.a>
+                             );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                )}
-              </div>
-            ))}
+               );
+            })}
             
-            {/* CTA Button Mock */}
             <div className="ml-6 pl-6 border-l border-current border-opacity-10">
                <button className="px-6 py-2 bg-current text-white dark:text-slate-900 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
                  Book
@@ -132,36 +230,50 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         </div>
 
         {/* Mobile Nav Overlay */}
-        {isMobileOpen && (
-          <div className={`md:hidden absolute top-20 left-0 right-0 h-[calc(100vh-5rem)] p-8 overflow-y-auto ${mobileMenuClasses[menu.theme]} animate-in slide-in-from-top-4 duration-300`}>
-            <div className="flex flex-col space-y-4">
-              {menu.items.map((item, idx) => (
-                <div 
-                  key={item.id}
-                  className="animate-in slide-in-from-bottom-2 fade-in duration-500"
-                  style={{ animationDelay: `${idx * 50}ms` }}
+        <AnimatePresence>
+          {isMobileOpen && (
+            <motion.div
+              variants={mobileContainerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className={`md:hidden absolute top-20 left-0 right-0 overflow-y-auto ${mobileMenuClasses[menu.theme]}`}
+            >
+              <div className="flex flex-col space-y-4 p-8">
+                {menu.items.map((item) => {
+                  const ItemIcon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : null;
+                  return (
+                    <motion.div 
+                      key={item.id}
+                      variants={mobileItemVariants}
+                    >
+                      <a 
+                        href={item.url}
+                        className={`
+                          block py-3 text-2xl font-serif font-medium border-b border-current border-opacity-10 flex items-center gap-3
+                          ${item.depth > 0 ? 'ml-6 text-lg opacity-70 border-none py-2 font-sans' : ''} 
+                        `}
+                      >
+                        {ItemIcon && <ItemIcon className={item.depth > 0 ? "w-5 h-5" : "w-6 h-6"} />}
+                        {item.label}
+                      </a>
+                    </motion.div>
+                  );
+                })}
+                
+                <motion.div 
+                  variants={mobileItemVariants}
+                  className="pt-8 mt-4"
                 >
-                  <a 
-                    href={item.url}
-                    className={`
-                      block py-3 text-2xl font-serif font-medium border-b border-current border-opacity-10
-                      ${item.depth > 0 ? 'ml-6 text-lg opacity-70 border-none py-2 font-sans' : ''} 
-                    `}
-                  >
-                    {item.label}
-                  </a>
-                </div>
-              ))}
-              
-              <div className="pt-8 mt-4">
-                 <button className="w-full py-4 bg-current text-white dark:text-slate-900 rounded-xl font-bold uppercase tracking-widest">
-                   Get Started
-                 </button>
+                   <button className="w-full py-4 bg-current text-white dark:text-slate-900 rounded-xl font-bold uppercase tracking-widest shadow-lg">
+                     Get Started
+                   </button>
+                </motion.div>
               </div>
-            </div>
-          </div>
-        )}
-      </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.nav>
     </div>
   );
 };
