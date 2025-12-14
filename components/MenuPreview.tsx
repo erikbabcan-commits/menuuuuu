@@ -67,27 +67,56 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
   };
 
   const mobileContainerVariants: Variants = {
-    hidden: { opacity: 0, height: 0 },
+    hidden: { 
+      opacity: 0, 
+      height: 0,
+      y: -16, // Start slightly above
+    },
     visible: { 
       opacity: 1, 
       height: "calc(100vh - 5rem)",
+      y: 0,
       transition: { 
-        duration: 0.5, 
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.45, 
+        ease: [0.22, 1, 0.36, 1], // "Luxury" ease-out
         staggerChildren: 0.08,
-        delayChildren: 0.1
+        delayChildren: 0.05
       }
     },
     exit: { 
       opacity: 0, 
       height: 0,
-      transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } 
+      y: -8,
+      transition: { 
+        duration: 0.35, 
+        ease: [0.22, 1, 0.36, 1],
+        staggerChildren: 0.05, 
+        staggerDirection: -1
+      } 
     }
   };
 
   const mobileItemVariants: Variants = {
-    hidden: { opacity: 0, y: 15, filter: "blur(4px)" },
-    visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: "easeOut" } }
+    hidden: { 
+      opacity: 0, 
+      y: 20, 
+      filter: "blur(8px)" 
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      filter: "blur(0px)", 
+      transition: { 
+        duration: 0.6, 
+        ease: [0.22, 1, 0.36, 1] 
+      } 
+    },
+    exit: { 
+      opacity: 0, 
+      y: 10, 
+      filter: "blur(4px)", 
+      transition: { duration: 0.2 } 
+    }
   };
 
   return (

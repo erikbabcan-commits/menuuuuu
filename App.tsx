@@ -1,36 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Builder } from './components/Builder';
-import { Menu } from './types';
+import { Menu, PlanTier } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { getNextTier } from './utils/gastroPlans';
+import { DevLockScreen } from './components/DevLockScreen';
+import { DEMO_MENU } from './utils/demoData';
 
 const STORAGE_KEY = 'lmb_menus';
+const PLAN_STORAGE_KEY = 'lmb_plan';
+const DEV_AUTH_KEY = 'lmb_dev_auth';
 
 const App: React.FC = () => {
   const [route, setRoute] = useState<'dashboard' | 'builder'>('dashboard');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Plan state with persistence
+  const [currentPlan, setCurrentPlan] = useState<PlanTier>('basic');
+  
+  // Developer Lock State - Lazy initialization to prevent flash
+  const [showDevLock, setShowDevLock] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const auth = localStorage.getItem(DEV_AUTH_KEY);
+        return auth !== 'true';
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return true;
+  });
 
   // Load from local storage on mount
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    // Load Menus
+    const savedMenus = localStorage.getItem(STORAGE_KEY);
+    if (savedMenus) {
       try {
-        setMenus(JSON.parse(saved));
+        const parsed = JSON.parse(savedMenus);
+        // If array is empty (user deleted everything), that's fine.
+        // If key didn't exist at all (null), we inject demo.
+        setMenus(parsed);
       } catch (e) {
         console.error('Failed to load menus', e);
       }
+    } else {
+      // First time user experience: Inject Demo Data
+      setMenus([DEMO_MENU]);
     }
+
+    // Load Plan
+    const savedPlan = localStorage.getItem(PLAN_STORAGE_KEY);
+    if (savedPlan) {
+      setCurrentPlan(savedPlan as PlanTier);
+    }
+
     setIsLoaded(true);
   }, []);
 
-  // Save to local storage whenever menus change
+  // Save Menus to local storage whenever they change
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(menus));
     }
   }, [menus, isLoaded]);
+
+  // Save Plan to local storage whenever it changes
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(PLAN_STORAGE_KEY, currentPlan);
+    }
+  }, [currentPlan, isLoaded]);
 
   const handleCreate = () => {
     setActiveMenuId(null);
@@ -62,25 +104,58 @@ const App: React.FC = () => {
     });
     setRoute('dashboard');
   };
+  
+  const handleUpgrade = () => {
+     const next = getNextTier(currentPlan);
+     if (next) {
+       if(confirm(`Simulate payment and upgrade to ${next.toUpperCase()}?`)) {
+         setCurrentPlan(next);
+       }
+     } else {
+       alert("You are on the highest tier!");
+     }
+  };
+
+  // Auth Handlers
+  const handleDevUnlock = () => {
+    localStorage.setItem(DEV_AUTH_KEY, 'true');
+    setCurrentPlan('enterprise'); // Auto-upgrade to max tier
+    setShowDevLock(false);
+  };
+
+  const handleGuestAccess = () => {
+    setShowDevLock(false);
+    // Keep existing plan or default to basic
+  };
 
   if (!isLoaded) return null;
 
   return (
     <ErrorBoundary>
-      {route === 'builder' ? (
-        <Builder 
-          menuId={activeMenuId} 
-          onBack={() => setRoute('dashboard')} 
-          onSave={handleSaveMenu}
-          initialData={menus.find(m => m.id === activeMenuId)}
-        />
+      {showDevLock ? (
+        <DevLockScreen onUnlock={handleDevUnlock} onGuest={handleGuestAccess} />
       ) : (
-        <Dashboard 
-          menus={menus} 
-          onCreate={handleCreate} 
-          onEdit={handleEdit} 
-          onDelete={handleDelete}
-        />
+        <>
+          {route === 'builder' ? (
+            <Builder 
+              menuId={activeMenuId} 
+              onBack={() => setRoute('dashboard')} 
+              onSave={handleSaveMenu}
+              initialData={menus.find(m => m.id === activeMenuId)}
+              currentPlan={currentPlan}
+              onUpgrade={handleUpgrade}
+            />
+          ) : (
+            <Dashboard 
+              menus={menus} 
+              onCreate={handleCreate} 
+              onEdit={handleEdit} 
+              onDelete={handleDelete}
+              currentPlan={currentPlan}
+              onUpgrade={handleUpgrade}
+            />
+          )}
+        </>
       )}
     </ErrorBoundary>
   );

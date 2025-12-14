@@ -12,10 +12,18 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle http/https requests
+  if (!event.request.url.startsWith('http')) return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      // Stale-while-revalidate strategy:
+      // Return cached response immediately if available, but fetch update in background
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+        // Cache valid responses. 
+        // We include 'cors' type to allow caching of CDN assets (esm.sh, tailwindcss, fonts)
+        if (networkResponse && networkResponse.status === 200 && 
+           (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
@@ -23,8 +31,9 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
-        // Offline handling could go here
+        // If offline and no cache, we just fail for now (or could return fallback)
       });
+
       return cachedResponse || fetchPromise;
     })
   );
