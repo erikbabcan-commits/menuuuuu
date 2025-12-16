@@ -2,55 +2,55 @@ import { Menu } from '../types';
 
 export const DEMO_MENU: Menu = {
   id: 'demo-menu-01',
-  name: 'Le Lumière • Dinner',
+  name: 'Le Lumière • Večera',
   theme: 'dark',
   createdAt: Date.now(),
   items: [
     {
       id: 'sec-1',
-      label: 'Commencement',
+      label: 'Úvod',
       url: '#starters',
       depth: 0,
       icon: 'Star'
     },
     {
       id: 'item-1-1',
-      label: 'Velouté de Cèpes - $24',
+      label: 'Hríbové Velouté - 24€',
       url: '#soup',
       depth: 1,
       icon: 'Coffee'
     },
     {
       id: 'item-1-2',
-      label: 'Truffle Scallops - $32',
+      label: 'Hrebenatky s Hľuzovkou - 32€',
       url: '#scallops',
       depth: 1,
       icon: 'Sun'
     },
     {
       id: 'sec-2',
-      label: 'Plats Principaux',
+      label: 'Hlavné Chody',
       url: '#mains',
       depth: 0,
       icon: 'Menu'
     },
     {
       id: 'item-2-1',
-      label: 'Wagyu A5 Ribeye - $120',
+      label: 'Wagyu A5 Ribeye - 120€',
       url: '#steak',
       depth: 1,
       icon: 'Heart'
     },
     {
       id: 'item-2-2',
-      label: 'Lobster Thermidor - $85',
+      label: 'Homár Thermidor - 85€',
       url: '#lobster',
       depth: 1,
       icon: 'Anchor'
     },
     {
       id: 'sec-3',
-      label: 'Sommelier Selection',
+      label: 'Výber Someliéra',
       url: '#wine',
       depth: 0,
       icon: 'Moon'

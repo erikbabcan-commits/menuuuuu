@@ -124,22 +124,22 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
           className={`space-y-6 max-w-3xl ${currentTheme.heroText}`}
         >
           <div className="inline-block px-4 py-1.5 rounded-full border border-current/20 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-4 opacity-70">
-            Collection 2025
+            Kolekcia 2025
           </div>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-[1.1] tracking-tight">
-            Redefining <br/>
-            <span className="italic font-light opacity-90">Digital Luxury.</span>
+            Nová definícia <br/>
+            <span className="italic font-light opacity-90">Digitálneho Luxusu.</span>
           </h1>
           <p className="text-base md:text-lg opacity-70 font-light leading-relaxed max-w-lg mx-auto">
-            Experience the harmony of form and function. This preview demonstrates your menu's integration with high-end aesthetic layouts.
+            Zažite harmóniu formy a funkcie. Tento náhľad demonštruje integráciu vášho menu s prémiovým estetickým rozložením.
           </p>
           
           <div className="pt-8 flex flex-col sm:flex-row justify-center gap-4">
             <button className={`h-12 px-8 rounded-full font-medium transition-transform hover:scale-105 active:scale-95 ${menu.theme === 'dark' ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>
-              View Collection
+              Zobraziť ponuku
             </button>
             <button className={`h-12 px-8 rounded-full border border-current/20 font-medium hover:bg-current/5 transition-colors`}>
-              Make Reservation
+              Vytvoriť rezerváciu
             </button>
           </div>
         </motion.div>
@@ -217,7 +217,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
             
             <div className="ml-6 pl-6 border-l border-current/10">
                <button className="px-6 py-2.5 bg-current text-white dark:text-slate-900 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-lg shadow-current/20">
-                 Book
+                 Rezervovať
                </button>
             </div>
           </div>
@@ -274,7 +274,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                 
                 <motion.div variants={mobileItemVariants} className="pt-8 mt-auto">
                    <button className="w-full py-4 bg-current text-white dark:text-slate-900 rounded-2xl font-bold uppercase tracking-widest shadow-xl">
-                     Book a Table
+                     Rezervovať stôl
                    </button>
                 </motion.div>
               </div>

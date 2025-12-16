@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    base: './', // Use relative paths for assets
     define: {
       // Polyfill process.env.API_KEY for the GenAI SDK
       'process.env.API_KEY': JSON.stringify(env.API_KEY)

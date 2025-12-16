@@ -18,7 +18,8 @@ root.render(
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
+    // Use relative path ./sw.js to ensure it works in subpaths and preview environments
+    navigator.serviceWorker.register('./sw.js').then(
       (registration) => {
         console.log('ServiceWorker registration successful');
       },

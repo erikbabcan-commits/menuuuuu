@@ -1,8 +1,9 @@
 const CACHE_NAME = 'lmb-v1';
+// Use relative paths for assets to avoid origin mismatch issues
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

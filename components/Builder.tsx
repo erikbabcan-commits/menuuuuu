@@ -21,9 +21,9 @@ interface BuilderProps {
 }
 
 const THEMES: { id: MenuTheme; label: string; color: string }[] = [
-  { id: 'glass', label: 'Glassmorphism', color: 'bg-indigo-100' },
-  { id: 'dark', label: 'Dark Luxury', color: 'bg-slate-900' },
-  { id: 'light', label: 'Clean Light', color: 'bg-white' }
+  { id: 'glass', label: 'Sklenený efekt', color: 'bg-indigo-100' },
+  { id: 'dark', label: 'Tmavý Luxus', color: 'bg-slate-900' },
+  { id: 'light', label: 'Čistý Svetlý', color: 'bg-white' }
 ];
 
 export const Builder: React.FC<BuilderProps> = ({ 
@@ -32,7 +32,7 @@ export const Builder: React.FC<BuilderProps> = ({
   // --- State ---
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
   const [items, setItems] = useState<MenuItem[]>(initialData?.items || []);
-  const [name, setName] = useState(initialData?.name || 'New Menu');
+  const [name, setName] = useState(initialData?.name || 'Nové Menu');
   const [theme, setTheme] = useState<MenuTheme>(initialData?.theme || 'glass');
   
   // AI State
@@ -53,7 +53,7 @@ export const Builder: React.FC<BuilderProps> = ({
   const handleAddItem = () => {
     const newItem: MenuItem = {
       id: crypto.randomUUID(),
-      label: 'New Item',
+      label: 'Nová položka',
       url: '#',
       depth: 0
     };
@@ -70,7 +70,7 @@ export const Builder: React.FC<BuilderProps> = ({
   };
 
   const handleClearAll = () => {
-    if (confirm('Clear all items? This is perfect for starting fresh from a template.')) {
+    if (confirm('Vymazať všetky položky? Toto je ideálne na začiatok "od nuly".')) {
       setItems([]);
       setShowDemoGuide(false);
     }
@@ -78,14 +78,14 @@ export const Builder: React.FC<BuilderProps> = ({
   
   const handleResetDemo = () => {
      setItems([]);
-     setName('New Menu');
+     setName('Nové Menu');
      setTheme('glass');
      setShowDemoGuide(false);
   };
 
   const handleSave = () => {
     if (!name.trim()) {
-      alert('Please name your menu');
+      alert('Prosím, pomenujte vaše menu.');
       return;
     }
     const menu: Menu = {
@@ -123,7 +123,7 @@ export const Builder: React.FC<BuilderProps> = ({
       setItems(newItems);
       setActiveTab('preview'); 
     } catch (e) {
-      alert('AI Generation failed. Please try again.');
+      alert('AI Generovanie zlyhalo. Skúste to prosím znova.');
     } finally {
       setIsGenerating(false);
     }
@@ -159,10 +159,10 @@ export const Builder: React.FC<BuilderProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="font-serif font-bold text-lg text-slate-900 bg-transparent outline-none placeholder:text-slate-300 w-full md:w-64 truncate focus:ring-0 p-0 border-none"
-              placeholder="Menu Name"
+              placeholder="Názov menu"
             />
             <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase truncate hidden sm:inline-block">
-              {items.length} Items • {theme} Theme
+              {items.length} Položiek • Téma {theme}
             </span>
           </div>
         </div>
@@ -180,7 +180,7 @@ export const Builder: React.FC<BuilderProps> = ({
                 onClick={() => setActiveTab('preview')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Preview
+                Náhľad
               </button>
            </div>
 
@@ -189,7 +189,7 @@ export const Builder: React.FC<BuilderProps> = ({
              onClick={handleSave} 
              className="hidden md:flex rounded-xl"
            >
-             <Save className="w-4 h-4 mr-2" /> Save
+             <Save className="w-4 h-4 mr-2" /> Uložiť
            </Button>
 
            {/* Mobile Save Icon */}
@@ -223,9 +223,9 @@ export const Builder: React.FC<BuilderProps> = ({
                     <Sparkles className="w-24 h-24 rotate-12" />
                   </div>
                   <div className="relative z-10">
-                    <h3 className="text-xl font-serif font-bold mb-2">Builder Guide</h3>
+                    <h3 className="text-xl font-serif font-bold mb-2">Sprievodca</h3>
                     <p className="text-indigo-200 text-sm mb-6 max-w-md">
-                      Customize this sample or start fresh.
+                      Upravte túto ukážku alebo začnite odznova.
                     </p>
                     <div className="flex gap-3">
                       <Button 
@@ -234,7 +234,7 @@ export const Builder: React.FC<BuilderProps> = ({
                         onClick={handleResetDemo}
                         className="bg-white text-indigo-900 border-none hover:bg-indigo-50"
                       >
-                        <Eraser className="w-4 h-4 mr-2" /> Clear
+                        <Eraser className="w-4 h-4 mr-2" /> Vymazať
                       </Button>
                       <Button 
                         size="sm" 
@@ -242,7 +242,7 @@ export const Builder: React.FC<BuilderProps> = ({
                         onClick={() => setShowDemoGuide(false)}
                         className="text-indigo-200 hover:text-white hover:bg-white/10"
                       >
-                        Close
+                        Zavrieť
                       </Button>
                     </div>
                   </div>
@@ -259,15 +259,15 @@ export const Builder: React.FC<BuilderProps> = ({
                <div className="relative z-10">
                  <div className="flex items-center gap-2 mb-2 opacity-80">
                    <Sparkles className="w-4 h-4" />
-                   <span className="text-xs font-bold uppercase tracking-widest">AI Architect</span>
+                   <span className="text-xs font-bold uppercase tracking-widest">AI Architekt</span>
                  </div>
-                 <h2 className="text-xl md:text-2xl font-serif font-bold mb-4 leading-tight">Generate structure instantly.</h2>
+                 <h2 className="text-xl md:text-2xl font-serif font-bold mb-4 leading-tight">Vygenerovať štruktúru okamžite.</h2>
                  
                  <div className="flex flex-col gap-3">
                    <input 
                      value={prompt}
                      onChange={(e) => setPrompt(e.target.value)}
-                     placeholder="e.g. Modern Japanese Lunch..."
+                     placeholder="napr. Moderný obed, Talianska večera..."
                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 backdrop-blur-sm transition-all"
                    />
                    <div className="flex gap-2">
@@ -277,14 +277,14 @@ export const Builder: React.FC<BuilderProps> = ({
                       isLoading={isGenerating}
                       className="bg-white text-indigo-900 border-none hover:bg-indigo-50 w-full justify-center"
                     >
-                      Create Menu
+                      Vytvoriť Menu
                     </Button>
                     {items.length > 0 && (
                       <button 
                         onClick={handleOptimize}
                         disabled={isOptimizing}
                         className="px-4 py-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-colors disabled:opacity-50"
-                        title="Optimize Order"
+                        title="Optimalizovať poradie"
                       >
                         {isOptimizing ? <span className="animate-spin block">⌛</span> : <TrendingUp className="w-5 h-5" />}
                       </button>
@@ -297,7 +297,7 @@ export const Builder: React.FC<BuilderProps> = ({
             {/* Theme Selector */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <Palette className="w-3 h-3" /> Visual Theme
+                <Palette className="w-3 h-3" /> Vizuálna téma
               </label>
               <div className="grid grid-cols-3 gap-3">
                 {THEMES.map(t => (
@@ -320,7 +320,7 @@ export const Builder: React.FC<BuilderProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between sticky top-0 bg-slate-50 py-2 z-10">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                   <Layers className="w-3 h-3" /> Menu Items
+                   <Layers className="w-3 h-3" /> Položky Menu
                 </label>
                 
                 <div className="flex items-center gap-2">
@@ -330,13 +330,13 @@ export const Builder: React.FC<BuilderProps> = ({
                       variant="ghost" 
                       onClick={handleClearAll}
                       className="text-slate-400 hover:text-red-500 hover:bg-red-50"
-                      title="Clear All"
+                      title="Vymazať všetko"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={handleAddItem} className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                    <Plus className="w-4 h-4 mr-1" /> Add Item
+                    <Plus className="w-4 h-4 mr-1" /> Pridať položku
                   </Button>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export const Builder: React.FC<BuilderProps> = ({
               <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2 pb-20">
                 {items.length === 0 && (
                   <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
-                    <p className="text-slate-400 text-sm">List is empty.</p>
+                    <p className="text-slate-400 text-sm">Zoznam je prázdny.</p>
                   </div>
                 )}
 
@@ -424,7 +424,7 @@ export const Builder: React.FC<BuilderProps> = ({
                              >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Label</label>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Názov</label>
                                     <input 
                                       value={item.label}
                                       onChange={(e) => updateItem(item.id, { label: e.target.value })}
@@ -432,7 +432,7 @@ export const Builder: React.FC<BuilderProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Destination URL</label>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cieľová URL</label>
                                     <input 
                                       value={item.url}
                                       onChange={(e) => updateItem(item.id, { url: e.target.value })}

@@ -40,9 +40,9 @@ export const DevLockScreen: React.FC<DevLockScreenProps> = ({ onUnlock, onGuest 
           <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-6">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2">Developer Access</h1>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Vývojársky prístup</h1>
           <p className="text-slate-400 text-sm">
-            Enter the security key to unlock full Enterprise features and system controls.
+            Zadajte bezpečnostný kľúč na odomknutie funkcií Enterprise a systémových nastavení.
           </p>
         </div>
 
@@ -59,7 +59,7 @@ export const DevLockScreen: React.FC<DevLockScreenProps> = ({ onUnlock, onGuest 
                 setIsError(false);
               }}
               className={`w-full bg-slate-900/50 border ${isError ? 'border-red-500/50 text-red-200 placeholder-red-300/30' : 'border-white/10 text-white placeholder-slate-600'} rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all`}
-              placeholder="Enter Access Code"
+              placeholder="Zadajte prístupový kód"
               autoFocus
             />
           </div>
@@ -68,17 +68,17 @@ export const DevLockScreen: React.FC<DevLockScreenProps> = ({ onUnlock, onGuest 
             type="submit"
             className="w-full py-3.5 bg-white text-slate-950 rounded-xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
-            <ShieldCheck className="w-4 h-4" /> Unlock System
+            <ShieldCheck className="w-4 h-4" /> Odomknúť systém
           </button>
         </form>
 
         <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-          <p className="text-xs text-slate-500">Restricted Area. Authorized Personnel Only.</p>
+          <p className="text-xs text-slate-500">Vyhradená oblasť. Len pre autorizovaný personál.</p>
           <button 
             onClick={onGuest}
             className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1 group"
           >
-            Continue as Guest <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+            Pokračovať ako hosť <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </motion.div>

@@ -20,33 +20,33 @@ export const PLAN_CONFIG: Record<PlanTier, {
 }> = {
   basic: {
     price: 19.00,
-    label: 'Basic',
-    description: 'Essential menu management.',
-    features: ['Menu Builder', 'Basic Support', 'Limited Traffic'],
+    label: 'Základ',
+    description: 'Základná správa menu.',
+    features: ['Tvorca menu', 'Základná podpora', 'Obmedzená návštevnosť'],
     limits: { storage: 0, traffic: 'limited', support: 'limited' },
     modules: { restaurants: true, menus: true, reservations: false, customers: false, payments: false }
   },
   business: {
     price: 39.00,
-    label: 'Business',
-    description: 'For growing restaurants.',
-    features: ['Reservations', '1GB Storage', 'Unlimited Support'],
+    label: 'Biznis',
+    description: 'Pre rastúce reštaurácie.',
+    features: ['Rezervácie', '1GB Úložisko', 'Prioritná podpora'],
     limits: { storage: 1024, traffic: 'limited', support: 'unlimited' },
     modules: { restaurants: true, menus: true, reservations: true, customers: false, payments: false }
   },
   corporate: {
     price: 69.00,
-    label: 'Corporate',
-    description: 'Scaling operations.',
-    features: ['CRM / Customers', '10GB Storage', 'Unlimited Traffic'],
+    label: 'Korporát',
+    description: 'Škálovanie prevádzky.',
+    features: ['CRM / Zákazníci', '10GB Úložisko', 'Neobmedzená návštevnosť'],
     limits: { storage: 10240, traffic: 'unlimited', support: 'unlimited' },
     modules: { restaurants: true, menus: true, reservations: true, customers: true, payments: false }
   },
   enterprise: {
     price: 99.00,
     label: 'Enterprise',
-    description: 'Full automated platform.',
-    features: ['Payments', 'Unlimited Storage', 'API Access'],
+    description: 'Plne automatizovaná platforma.',
+    features: ['Platby', 'Neobmedzené úložisko', 'API Prístup'],
     limits: { storage: 'unlimited', traffic: 'unlimited', support: 'unlimited' },
     modules: { restaurants: true, menus: true, reservations: true, customers: true, payments: true }
   }

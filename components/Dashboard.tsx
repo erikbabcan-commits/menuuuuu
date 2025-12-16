@@ -63,11 +63,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
              <div className="flex flex-col">
                 <span className="font-serif font-bold text-slate-900 tracking-tight leading-none text-sm md:text-base">Gastro OS</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
-                   Workspace
+                   Pracovná plocha
                 </span>
              </div>
              <span className="hidden sm:inline-flex ml-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200">
-               {planDetails.label} Plan
+               Balík {planDetails.label}
              </span>
           </div>
 
@@ -76,7 +76,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {storageLimit !== 0 && (
               <div className="hidden md:flex flex-col gap-1 w-32">
                  <div className="flex justify-between text-[10px] uppercase font-bold text-slate-400">
-                    <span>Storage</span>
+                    <span>Úložisko</span>
                     <span>{storageLimit === 'unlimited' ? '∞' : `${Math.round(storagePercent)}%`}</span>
                  </div>
                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -92,7 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             
             {nextPlan && (
               <Button size="sm" variant="gradient" onClick={onUpgrade} className="hidden md:flex">
-                <ArrowUpCircle className="w-4 h-4" /> Upgrade
+                <ArrowUpCircle className="w-4 h-4" /> Inovovať
               </Button>
             )}
             
@@ -112,11 +112,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           className="mb-8 md:mb-10 pl-2"
         >
           <h1 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 mb-2">
-            Good Morning.
+            Dobré ráno.
           </h1>
           <p className="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed">
-            Your digital ecosystem is active. 
-            {nextPlan && <span className="text-indigo-600 font-medium cursor-pointer hover:underline" onClick={onUpgrade}> Unlock AI features</span>}
+            Váš digitálny ekosystém je aktívny. 
+            {nextPlan && <span className="text-indigo-600 font-medium cursor-pointer hover:underline" onClick={onUpgrade}> Odomknúť AI funkcie</span>}
           </p>
         </motion.div>
 
@@ -141,20 +141,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <Layout className="w-6 h-6" />
                    </div>
                    <Button onClick={onCreate} className="rounded-xl shadow-lg shadow-indigo-500/20">
-                     <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">New Menu</span>
+                     <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Nové Menu</span>
                    </Button>
                  </div>
                  
-                 <h3 className="text-xl md:text-2xl font-serif font-bold text-slate-900 mb-2">Digital Menus</h3>
-                 <p className="text-slate-500 text-sm mb-6 max-w-sm">Manage your restaurant's offerings with our AI architect. Drag, drop, and publish.</p>
+                 <h3 className="text-xl md:text-2xl font-serif font-bold text-slate-900 mb-2">Digitálne Menu</h3>
+                 <p className="text-slate-500 text-sm mb-6 max-w-sm">Spravujte ponuku vašej reštaurácie pomocou AI architekta. Potiahni a pusti.</p>
                  
                  <div className="space-y-3 mt-auto">
                    {menus.length === 0 ? (
                      <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col items-center justify-center gap-4">
-                        <p className="text-slate-400 text-sm">No menus created yet.</p>
+                        <p className="text-slate-400 text-sm">Zatiaľ žiadne menu.</p>
                         {onRestoreDemo && (
                           <Button variant="ghost" size="sm" onClick={onRestoreDemo} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100">
-                             <Sparkles className="w-4 h-4 mr-2" /> Restore Demo Data
+                             <Sparkles className="w-4 h-4 mr-2" /> Obnoviť ukážkové dáta
                           </Button>
                         )}
                      </div>
@@ -183,40 +183,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           {/* 2. Reservations Module */}
           <ModuleCard 
-            title="Reservations" 
+            title="Rezervácie" 
             moduleKey="reservations"
             icon={Calendar} 
-            description="Table booking."
+            description="Správa stolov."
             plan={currentPlan}
             requiredPlan="business"
             onUpgrade={onUpgrade}
-            stats="12 today"
+            stats="12 dnes"
             color="bg-emerald-50 text-emerald-600"
           />
 
           {/* 3. CRM Module */}
           <ModuleCard 
-            title="Customers" 
+            title="Zákazníci" 
             moduleKey="customers"
             icon={Users} 
-            description="Loyalty data."
+            description="Vernostné dáta."
             plan={currentPlan}
             requiredPlan="corporate"
             onUpgrade={onUpgrade}
-            stats="1,402 active"
+            stats="1,402 aktívnych"
             color="bg-blue-50 text-blue-600"
           />
 
           {/* 4. Payments Module */}
           <ModuleCard 
-            title="Payments" 
+            title="Platby" 
             moduleKey="payments"
             icon={CreditCard} 
             description="Stripe Connect."
             plan={currentPlan}
             requiredPlan="enterprise"
             onUpgrade={onUpgrade}
-            stats="$12.4k"
+            stats="12 400 €"
             color="bg-purple-50 text-purple-600"
           />
 
@@ -226,10 +226,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
                    <Activity className="w-6 h-6" />
                 </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Analytics</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Analytika</div>
              </div>
              <div>
-               <h4 className="font-bold text-slate-900 text-sm opacity-60">Monthly Traffic</h4>
+               <h4 className="font-bold text-slate-900 text-sm opacity-60">Mesačná návštevnosť</h4>
                <div className="text-3xl font-serif font-bold text-slate-900 mt-1 tracking-tight">
                  {planDetails.limits.traffic === 'limited' ? '2.4k' : '154k'}
                </div>
@@ -248,13 +248,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Cloud</div>
              </div>
              <div>
-               <h4 className="font-bold text-slate-900 text-sm opacity-60">Assets Used</h4>
+               <h4 className="font-bold text-slate-900 text-sm opacity-60">Využité zdroje</h4>
                <div className="text-3xl font-serif font-bold text-slate-900 mt-1 tracking-tight">
                  {storageLimit === 0 ? '0MB' : (storageLimit === 'unlimited' ? '45GB' : `${storageUsed}MB`)}
                </div>
                <div className="text-xs text-slate-400 mt-2 flex items-center gap-1">
                  {storageLimit === 0 ? <Lock className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                 {storageLimit === 0 ? 'Upgrade to upload' : 'High-res assets'}
+                 {storageLimit === 0 ? 'Inovujte pre nahrávanie' : 'Hi-res podklady'}
                </div>
              </div>
           </motion.div>
@@ -294,10 +294,10 @@ const ModuleCard: React.FC<{
           >
             <Lock className="w-5 h-5" />
           </motion.div>
-          <h4 className="font-bold text-slate-900 mb-1">Locked</h4>
-          <p className="text-xs text-slate-500 mb-4">Available on {reqPlanLabel}</p>
+          <h4 className="font-bold text-slate-900 mb-1">Zamknuté</h4>
+          <p className="text-xs text-slate-500 mb-4">Dostupné v balíku {reqPlanLabel}</p>
           <Button size="sm" onClick={onUpgrade} variant="secondary" className="w-full justify-center rounded-xl">
-            Upgrade
+            Inovovať
           </Button>
         </div>
       )}
@@ -314,7 +314,7 @@ const ModuleCard: React.FC<{
       
       <div className="pt-6 mt-4 border-t border-slate-50">
         <div className="flex items-center justify-between text-sm">
-           <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">Status</span>
+           <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">Stav</span>
            <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">{isLocked ? '---' : stats}</span>
         </div>
       </div>

@@ -52,7 +52,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         <Search className="w-4 h-4 text-slate-400" />
         <input
           className="flex-1 text-sm outline-none bg-transparent placeholder:text-slate-400 text-slate-700"
-          placeholder="Search icons..."
+          placeholder="Hľadať ikony..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           autoFocus
@@ -65,7 +65,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         <button
            onClick={() => { onSelect(''); onClose(); }}
            className={`p-2 rounded-lg flex items-center justify-center transition-colors hover:bg-slate-100 text-slate-400`}
-           title="No Icon"
+           title="Bez ikony"
         >
           <X className="w-5 h-5" />
         </button>
@@ -86,7 +86,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         {filteredIcons.length === 0 && (
           <div className="col-span-6 py-8 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
             <Smile className="w-6 h-6 opacity-20" />
-            No icons found
+            Ikony nenájdené
           </div>
         )}
       </div>

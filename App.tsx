@@ -85,7 +85,7 @@ const App: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this menu?')) {
+    if (confirm('Naozaj chcete vymazať toto menu?')) {
       const newMenus = menus.filter(m => m.id !== id);
       setMenus(newMenus);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newMenus));
@@ -108,11 +108,11 @@ const App: React.FC = () => {
   const handleUpgrade = () => {
      const next = getNextTier(currentPlan);
      if (next) {
-       if(confirm(`Simulate payment and upgrade to ${next.toUpperCase()}?`)) {
+       if(confirm(`Simulovať platbu a inovovať na balík ${next.toUpperCase()}?`)) {
          setCurrentPlan(next);
        }
      } else {
-       alert("You are on the highest tier!");
+       alert("Máte najvyšší balík!");
      }
   };
 

@@ -34,9 +34,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="w-8 h-8" />
             </div>
-            <h1 className="font-serif text-2xl font-bold text-slate-900 mb-2">Something went wrong</h1>
+            <h1 className="font-serif text-2xl font-bold text-slate-900 mb-2">Niečo sa pokazilo</h1>
             <p className="text-slate-500 mb-6 text-sm leading-relaxed">
-              We encountered an unexpected issue. The application integrity protection has caught this error.
+              Vyskytla sa neočakávaná chyba. Ochrana integrity aplikácie zachytila tento problém.
             </p>
             <div className="bg-slate-100 rounded-lg p-3 text-xs font-mono text-left text-slate-600 mb-6 overflow-x-auto">
               {this.state.error?.message}
@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               onClick={() => window.location.reload()}
               className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
-              <RefreshCcw className="w-4 h-4" /> Reload Application
+              <RefreshCcw className="w-4 h-4" /> Reštartovať aplikáciu
             </button>
           </div>
         </div>
