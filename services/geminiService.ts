@@ -1,9 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiGeneratedItem, MenuItem } from "../types";
 
-// Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 // Helper to clean potential markdown formatting from JSON response
 const cleanJson = (text: string): string => {
   if (!text) return "[]";
@@ -17,6 +14,7 @@ const cleanJson = (text: string): string => {
 
 export const generateMenuStructure = async (description: string): Promise<AiGeneratedItem[]> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const model = "gemini-2.5-flash";
     
     const response = await ai.models.generateContent({
@@ -65,6 +63,7 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
 
 export const optimizeMenuStructure = async (items: MenuItem[], goal: 'conversion' | 'ux' = 'ux'): Promise<MenuItem[]> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const model = "gemini-2.5-flash";
     const itemsJson = JSON.stringify(items.map(({ id, label, url, depth }) => ({ id, label, url, depth })));
     

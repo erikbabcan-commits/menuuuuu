@@ -18,14 +18,22 @@ root.render(
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Use relative path ./sw.js to ensure it works in subpaths and preview environments
-    navigator.serviceWorker.register('./sw.js').then(
-      (registration) => {
-        console.log('ServiceWorker registration successful');
-      },
-      (err) => {
-        console.log('ServiceWorker registration failed: ', err);
-      }
-    );
+    try {
+      // Explicitly construct the URL relative to the current window location
+      // This fixes 'origin mismatch' errors in preview environments like StackBlitz or Replit
+      const swUrl = new URL('./sw.js', window.location.href).href;
+      
+      navigator.serviceWorker.register(swUrl).then(
+        (registration) => {
+          console.log('ServiceWorker registration successful');
+        },
+        (err) => {
+          // Suppress error in development if it's just a duplicate registration or offline
+          console.debug('ServiceWorker registration info: ', err);
+        }
+      );
+    } catch (error) {
+      console.warn('ServiceWorker initialization skipped:', error);
+    }
   });
 }

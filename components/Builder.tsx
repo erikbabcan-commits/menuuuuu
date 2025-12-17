@@ -214,9 +214,9 @@ export const Builder: React.FC<BuilderProps> = ({
             <AnimatePresence>
               {showDemoGuide && (
                 <motion.div 
-                  initial={{ opacity: 0, height: 0, mb: 0 }}
-                  animate={{ opacity: 1, height: 'auto', mb: 24 }}
-                  exit={{ opacity: 0, height: 0, mb: 0 }}
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   className="bg-indigo-900 text-white rounded-2xl p-6 relative overflow-hidden shadow-xl"
                 >
                   <div className="absolute top-0 right-0 p-4 opacity-20">
@@ -350,15 +350,18 @@ export const Builder: React.FC<BuilderProps> = ({
 
                 {items.map((item) => {
                   const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : null;
+                  const isPickerOpen = iconPickerOpen === item.id;
+
                   return (
                     <Reorder.Item key={item.id} value={item} id={item.id}>
                        <motion.div 
                          layout
                          initial={{ opacity: 0, y: 10 }}
                          animate={{ opacity: 1, y: 0 }}
+                         // IMPORTANT: removed overflow-hidden to allow IconPicker popup to show
                          className={`
-                           bg-white border rounded-xl shadow-sm transition-all overflow-hidden
-                           ${editingItem === item.id ? 'border-indigo-500 ring-2 ring-indigo-100 z-10 relative' : 'border-slate-200 hover:border-slate-300'}
+                           bg-white border rounded-xl shadow-sm transition-all
+                           ${editingItem === item.id || isPickerOpen ? 'border-indigo-500 ring-2 ring-indigo-100 z-20 relative' : 'border-slate-200 hover:border-slate-300 z-0'}
                          `}
                        >
                          {/* Header / Summary View */}
@@ -368,13 +371,18 @@ export const Builder: React.FC<BuilderProps> = ({
                            {/* Icon Trigger */}
                            <div className="relative">
                               <button 
-                                onClick={() => setIconPickerOpen(iconPickerOpen === item.id ? null : item.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIconPickerOpen(isPickerOpen ? null : item.id);
+                                }}
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${item.icon ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                               >
                                 {Icon ? <Icon className="w-4 h-4" /> : <Smile className="w-4 h-4" />}
                               </button>
+                              
+                              {/* Icon Picker Component */}
                               <IconPicker 
-                                isOpen={iconPickerOpen === item.id} 
+                                isOpen={isPickerOpen} 
                                 onClose={() => setIconPickerOpen(null)}
                                 onSelect={(icon) => updateItem(item.id, { icon })}
                                 selectedIcon={item.icon}
@@ -420,7 +428,7 @@ export const Builder: React.FC<BuilderProps> = ({
                                initial={{ height: 0, opacity: 0 }}
                                animate={{ height: 'auto', opacity: 1 }}
                                exit={{ height: 0, opacity: 0 }}
-                               className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-4"
+                               className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-4 overflow-hidden rounded-b-xl"
                              >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>

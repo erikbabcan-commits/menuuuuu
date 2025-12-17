@@ -31,12 +31,13 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
 
   const currentTheme = themeStyles[menu.theme] || themeStyles.glass;
 
-  // Animation Variants
+  // --- Premium Animation Variants ---
+
   const dropdownVariants: Variants = {
     hidden: { 
       opacity: 0, 
-      y: 8, 
-      scale: 0.96,
+      y: 4, 
+      scale: 0.98,
       filter: "blur(4px)",
       transition: { duration: 0.2, ease: "easeOut" }
     },
@@ -49,7 +50,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         duration: 0.3, 
         ease: [0.23, 1, 0.32, 1],
         staggerChildren: 0.05,
-        delayChildren: 0.05
+        delayChildren: 0.02
       }
     },
     exit: { 
@@ -61,9 +62,9 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
     }
   };
 
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, x: -8 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.25, ease: "easeOut" } }
+  const dropdownItemVariants: Variants = {
+    hidden: { opacity: 0, x: -8, filter: "blur(2px)" },
+    visible: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.25, ease: "easeOut" } }
   };
 
   const mobileContainerVariants: Variants = {
@@ -94,18 +95,35 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
   const mobileItemVariants: Variants = {
     hidden: { 
       opacity: 0, 
-      y: 20, 
-      filter: "blur(8px)" 
+      y: 15, 
+      filter: "blur(5px)" 
     },
     visible: { 
       opacity: 1, 
       y: 0, 
       filter: "blur(0px)", 
       transition: { 
-        duration: 0.6, 
+        duration: 0.5, 
         ease: [0.22, 1, 0.36, 1] 
       } 
     }
+  };
+  
+  const mobileSubmenuVariants: Variants = {
+    hidden: { opacity: 0, height: 0, transition: { duration: 0.2 } },
+    visible: { 
+      opacity: 1, 
+      height: 'auto',
+      transition: { 
+        duration: 0.3,
+        staggerChildren: 0.05
+      }
+    }
+  };
+  
+  const mobileSubItemVariants: Variants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } }
   };
 
   return (
@@ -118,14 +136,19 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
       {/* Hero Section */}
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 md:px-12 pt-20 pb-12">
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 1, ease: "easeOut" }}
           className={`space-y-6 max-w-3xl ${currentTheme.heroText}`}
         >
-          <div className="inline-block px-4 py-1.5 rounded-full border border-current/20 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-4 opacity-70">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 0.7, scale: 1 }} 
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="inline-block px-4 py-1.5 rounded-full border border-current/20 text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase mb-4"
+          >
             Kolekcia 2025
-          </div>
+          </motion.div>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-bold leading-[1.1] tracking-tight">
             Nová definícia <br/>
             <span className="italic font-light opacity-90">Digitálneho Luxusu.</span>
@@ -134,14 +157,19 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
             Zažite harmóniu formy a funkcie. Tento náhľad demonštruje integráciu vášho menu s prémiovým estetickým rozložením.
           </p>
           
-          <div className="pt-8 flex flex-col sm:flex-row justify-center gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="pt-8 flex flex-col sm:flex-row justify-center gap-4"
+          >
             <button className={`h-12 px-8 rounded-full font-medium transition-transform hover:scale-105 active:scale-95 ${menu.theme === 'dark' ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>
               Zobraziť ponuku
             </button>
             <button className={`h-12 px-8 rounded-full border border-current/20 font-medium hover:bg-current/5 transition-colors`}>
               Vytvoriť rezerváciu
             </button>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
 
@@ -197,8 +225,9 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                               <motion.a 
                                 key={child.id}
                                 href={child.url}
-                                variants={itemVariants}
-                                className="flex items-center justify-between px-4 py-3 rounded-xl text-sm hover:bg-current/5 transition-colors group/link"
+                                variants={dropdownItemVariants}
+                                whileHover={{ x: 4, backgroundColor: "rgba(128,128,128, 0.1)" }}
+                                className="flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-colors group/link cursor-pointer"
                               >
                                 <span className="flex items-center gap-3">
                                    {ChildIcon && <ChildIcon className="w-4 h-4 opacity-50" />}
@@ -256,17 +285,27 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                       
                       {/* Mobile Submenu */}
                       {item.children.length > 0 && (
-                        <div className="mt-4 ml-2 pl-6 border-l border-current/10 space-y-3">
-                          {item.children.map(child => (
-                             <a 
-                               key={child.id}
-                               href={child.url} 
-                               className="block text-lg opacity-60 font-medium py-1"
-                             >
-                               {child.label}
-                             </a>
-                          ))}
-                        </div>
+                        <motion.div 
+                          variants={mobileSubmenuVariants}
+                          initial="hidden"
+                          animate="visible"
+                          className="mt-4 ml-2 pl-6 border-l border-current/10 space-y-3"
+                        >
+                          {item.children.map(child => {
+                             const ChildIcon = child.icon && iconMap[child.icon] ? iconMap[child.icon] : null;
+                             return (
+                               <motion.a 
+                                 key={child.id}
+                                 href={child.url} 
+                                 variants={mobileSubItemVariants}
+                                 className="flex items-center gap-3 text-lg opacity-60 font-medium py-1"
+                               >
+                                 {ChildIcon && <ChildIcon className="w-4 h-4 opacity-70" />}
+                                 {child.label}
+                               </motion.a>
+                             );
+                          })}
+                        </motion.div>
                       )}
                     </motion.div>
                   );

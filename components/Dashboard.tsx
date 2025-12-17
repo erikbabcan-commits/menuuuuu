@@ -3,7 +3,7 @@ import {
   Plus, Edit2, Layout, Calendar, Users, CreditCard, 
   Lock, ArrowUpCircle, Database, Activity, Sparkles
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { Menu, PlanTier } from '../types';
 import { Button } from './ui/Button';
 import { PLAN_CONFIG, getNextTier } from '../utils/gastroPlans';
@@ -18,7 +18,7 @@ interface DashboardProps {
   onRestoreDemo?: () => void;
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -28,7 +28,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50, damping: 15 } }
 };
