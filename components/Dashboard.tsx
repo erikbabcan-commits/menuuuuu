@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Plus, Edit2, Layout, Calendar, Users, CreditCard, 
@@ -43,7 +42,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const nextPlan = nextPlanKey ? PLAN_CONFIG[nextPlanKey] : null;
 
   return (
-    <div className="min-h-dvh bg-slate-50 font-sans selection:bg-indigo-100 pb-32 overflow-y-auto scrollbar-hide pt-safe">
+    <div className="h-full bg-slate-50 font-sans selection:bg-indigo-100 overflow-y-auto pt-safe pb-32">
       
       {/* Floating Glass Header */}
       <motion.div 
@@ -126,7 +125,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {menus.length === 0 ? (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 border-2 border-dashed border-slate-100 rounded-[2rem] bg-slate-50/50 flex flex-col items-center justify-center gap-6">
                           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
-                             {/* Fixed: Added missing Layers icon from lucide-react */}
                              <Layers className="w-8 h-8 text-slate-200" />
                           </div>
                           <p className="text-slate-400 text-sm font-medium">Zatiaľ ste nevytvorili žiadne menu.</p>

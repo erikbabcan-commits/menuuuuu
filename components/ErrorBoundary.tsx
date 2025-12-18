@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -11,15 +11,13 @@ interface State {
   error?: Error;
 }
 
-// Fixed: Correctly extending React.Component and removing redundant override keyword to fix property access errors
-export class ErrorBoundary extends React.Component<Props, State> {
-  // Fixed: Removed 'override' modifier which was causing compilation issues
-  public state: State = {
-    hasError: false
-  };
-
+// Fixed the "Property 'props' and 'state' does not exist" errors by using the named Component import instead of React.Component.
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
+    this.state = {
+      hasError: false
+    };
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -31,7 +29,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   render() {
-    // Fixed: Standard access to state and props within React.Component
+    // Accessing state and props from 'this' which is standard for React class components.
     const { hasError, error } = this.state;
     const { children } = this.props;
 

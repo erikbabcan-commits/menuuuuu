@@ -43,23 +43,24 @@
   }
 }
 
-/* Custom scrollbar for luxury feel */
+/* Custom scrollbar for luxury feel - Optimized for visibility */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(241, 245, 249, 0.5); /* slate-100 with opacity */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #94a3b8; /* slate-400 */
   border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b; /* slate-500 */
 }
 
 .scrollbar-hide {

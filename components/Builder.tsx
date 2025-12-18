@@ -107,7 +107,7 @@ export const Builder: React.FC<BuilderProps> = ({
         <div className={`
           flex-1 h-full overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-50 transition-all duration-300
           ${activeTab === 'preview' ? 'hidden md:block md:w-1/3 opacity-50 grayscale-[0.5]' : 'block md:w-2/5 lg:w-1/3'}
-          border-r border-slate-200 scrollbar-hide
+          border-r border-slate-200
         `}>
           
           {/* Templates Section */}

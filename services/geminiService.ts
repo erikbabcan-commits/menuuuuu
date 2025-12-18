@@ -12,22 +12,26 @@ const cleanJson = (text: string): string => {
   return cleaned;
 };
 
+// Simulated delay for better UX (perceived intelligence)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const generateMenuStructure = async (description: string): Promise<AiGeneratedItem[]> => {
-  // Ak nie je API kľúč, rovno použijeme lokálny generátor
+  // If no API key, use Local Generator
   if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
-    console.log("Using Local Generator (No API Key)");
+    await sleep(1200); // Realistic local feel
     return generateLocalMenu(description);
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    // gemini-3-flash-preview je extrémne rýchly a má štedrý free tier
     const model = "gemini-3-flash-preview";
     
     const response = await ai.models.generateContent({
       model,
       contents: `Generate a luxury website menu structure for: ${description}. 
-      Return a JSON array of objects. Each object has a 'label', 'url', and optional 'children' array.`,
+      Target audience: High-end clientele. 
+      Language: Slovak.
+      Return a JSON array of objects with 'label', 'url', and optional 'children' array.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -66,7 +70,6 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
 };
 
 export const optimizeMenuStructure = async (items: MenuItem[]): Promise<MenuItem[]> => {
-  // Optimalizácia je voliteľná, v prípade nedostupnosti API vrátime pôvodné položky
   if (!process.env.API_KEY || process.env.API_KEY === 'undefined') return items;
 
   try {
@@ -76,7 +79,7 @@ export const optimizeMenuStructure = async (items: MenuItem[]): Promise<MenuItem
     
     const response = await ai.models.generateContent({
       model,
-      contents: `Reorder these menu items for better UX. Keep original IDs. Input: ${itemsJson}`,
+      contents: `Reorder these menu items for better UX. Keep original IDs. Language: Slovak. Input: ${itemsJson}`,
       config: { responseMimeType: "application/json" }
     });
 
