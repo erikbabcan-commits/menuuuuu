@@ -1,3 +1,4 @@
+
 import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
@@ -10,12 +11,15 @@ interface State {
   error?: Error;
 }
 
+// Fixed: Correctly extending React.Component and removing redundant override keyword to fix property access errors
 export class ErrorBoundary extends React.Component<Props, State> {
+  // Fixed: Removed 'override' modifier which was causing compilation issues
+  public state: State = {
+    hasError: false
+  };
+
   constructor(props: Props) {
     super(props);
-    this.state = {
-      hasError: false
-    };
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -27,7 +31,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   render() {
-    if (this.state.hasError) {
+    // Fixed: Standard access to state and props within React.Component
+    const { hasError, error } = this.state;
+    const { children } = this.props;
+
+    if (hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
           <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-slate-100">
@@ -39,7 +47,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               Vyskytla sa neočakávaná chyba. Ochrana integrity aplikácie zachytila tento problém.
             </p>
             <div className="bg-slate-100 rounded-lg p-3 text-xs font-mono text-left text-slate-600 mb-6 overflow-x-auto">
-              {this.state.error?.message}
+              {error?.message}
             </div>
             <button 
               onClick={() => window.location.reload()}
@@ -52,6 +60,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }

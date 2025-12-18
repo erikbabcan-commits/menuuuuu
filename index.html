@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Luxury Menu Builder - Tvorca Menu</title>
+    <meta name="description" content="Tvorba luxusných digitálnych menu pre prémiové reštaurácie a hotely s pomocou AI." />
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="https://placehold.co/192x192/0f172a/ffffff?text=LMB">
-    <!-- Keeping Tailwind CDN for simplicity, but in production consider installing it via PostCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <script type="importmap">
@@ -25,7 +27,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white h-full overflow-hidden">
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white h-full overflow-hidden overscroll-none">
     <div id="root" class="h-full"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

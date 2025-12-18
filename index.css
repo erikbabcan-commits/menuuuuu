@@ -3,16 +3,50 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply antialiased text-slate-900 bg-slate-50;
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+  }
+
+  html, body {
+    @apply antialiased text-slate-900 bg-slate-50 overflow-hidden;
     font-feature-settings: "cv11", "ss01";
+    height: 100dvh;
+    width: 100vw;
+    position: fixed; /* Prevent rubber-banding on iOS */
+  }
+
+  /* Fluid Typography */
+  h1 {
+    font-size: clamp(2.5rem, 8vw + 1rem, 6rem);
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: var(--sab);
+  }
+  .pt-safe {
+    padding-top: var(--sat);
+  }
+  .px-safe {
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
+  .h-dvh {
+    height: 100dvh;
+  }
+  .min-h-dvh {
+    min-height: 100dvh;
   }
 }
 
 /* Custom scrollbar for luxury feel */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -28,7 +62,6 @@
   background: #94a3b8;
 }
 
-/* Hide scrollbar utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -38,9 +71,8 @@
   display: none;
 }
 
-/* Animation Utilities */
 .animate-in {
-  animation-duration: 0.2s;
+  animation-duration: 0.3s;
   animation-fill-mode: both;
 }
 
@@ -69,11 +101,6 @@
   }
 }
 
-.animate-pulse-slow {
-  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
+.glass-effect {
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
 }

@@ -1,11 +1,11 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiGeneratedItem, MenuItem } from "../types";
+import { generateLocalMenu } from "./localGenerator";
 
-// Helper to clean potential markdown formatting from JSON response
 const cleanJson = (text: string): string => {
   if (!text) return "[]";
   let cleaned = text.trim();
-  // Remove markdown code blocks if present
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(json)?\n?/, "").replace(/\n?```$/, "");
   }
@@ -13,14 +13,20 @@ const cleanJson = (text: string): string => {
 };
 
 export const generateMenuStructure = async (description: string): Promise<AiGeneratedItem[]> => {
+  // Ak nie je API kľúč, rovno použijeme lokálny generátor
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
+    console.log("Using Local Generator (No API Key)");
+    return generateLocalMenu(description);
+  }
+
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = "gemini-2.5-flash";
+    // gemini-3-flash-preview je extrémne rýchly a má štedrý free tier
+    const model = "gemini-3-flash-preview";
     
     const response = await ai.models.generateContent({
       model,
-      contents: `Generate a website menu structure for: ${description}. 
-      The menu should be realistic and organized. 
+      contents: `Generate a luxury website menu structure for: ${description}. 
       Return a JSON array of objects. Each object has a 'label', 'url', and optional 'children' array.`,
       config: {
         responseMimeType: "application/json",
@@ -50,79 +56,37 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
     });
 
     const text = response.text;
-    if (!text) return [];
+    if (!text) return generateLocalMenu(description);
     
-    const cleanedText = cleanJson(text);
-    const data = JSON.parse(cleanedText) as AiGeneratedItem[];
-    return data;
+    return JSON.parse(cleanJson(text)) as AiGeneratedItem[];
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw error;
+    console.warn("Gemini API error, falling back to local generator:", error);
+    return generateLocalMenu(description);
   }
 };
 
-export const optimizeMenuStructure = async (items: MenuItem[], goal: 'conversion' | 'ux' = 'ux'): Promise<MenuItem[]> => {
+export const optimizeMenuStructure = async (items: MenuItem[]): Promise<MenuItem[]> => {
+  // Optimalizácia je voliteľná, v prípade nedostupnosti API vrátime pôvodné položky
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') return items;
+
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = "gemini-2.5-flash";
+    const model = "gemini-3-flash-preview";
     const itemsJson = JSON.stringify(items.map(({ id, label, url, depth }) => ({ id, label, url, depth })));
     
-    const prompt = `
-      Analyze this menu structure and reorder the items to optimize for ${goal === 'conversion' ? 'sales and conversion (put high value items first)' : 'user experience and logic'}.
-      Do not change labels or URLs, only change the order. Maintain the depth/hierarchy logic (children must follow parents).
-      Return the exact same JSON list but reordered.
-      Input: ${itemsJson}
-    `;
-
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              id: { type: Type.STRING },
-              label: { type: Type.STRING },
-              url: { type: Type.STRING },
-              depth: { type: Type.NUMBER }
-            },
-            required: ["id", "label", "depth"]
-          }
-        }
-      }
+      contents: `Reorder these menu items for better UX. Keep original IDs. Input: ${itemsJson}`,
+      config: { responseMimeType: "application/json" }
     });
 
     const text = response.text;
     if (!text) return items;
 
-    const cleanedText = cleanJson(text);
-    const reorderedSimple = JSON.parse(cleanedText) as {id: string}[];
-    
-    // Merge logic to restore original item properties (like icons)
+    const reorderedSimple = JSON.parse(cleanJson(text)) as {id: string}[];
     const itemMap = new Map(items.map(i => [i.id, i]));
-    const reorderedItems: MenuItem[] = [];
-    
-    reorderedSimple.forEach(simple => {
-      const original = itemMap.get(simple.id);
-      if (original) {
-        reorderedItems.push(original);
-      }
-    });
-
-    // If AI dropped items, append missing ones to end (safety)
-    items.forEach(item => {
-      if (!reorderedItems.find(r => r.id === item.id)) {
-        reorderedItems.push(item);
-      }
-    });
-
-    return reorderedItems;
-
-  } catch (error) {
-    console.error("Gemini Optimization Error:", error);
+    return reorderedSimple.map(s => itemMap.get(s.id)).filter(Boolean) as MenuItem[];
+  } catch (e) {
     return items;
   }
-}
+};

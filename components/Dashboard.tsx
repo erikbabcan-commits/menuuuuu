@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { 
   Plus, Edit2, Layout, Calendar, Users, CreditCard, 
-  Lock, ArrowUpCircle, Database, Activity, Sparkles
+  Lock, ArrowUpCircle, Database, Activity, Sparkles, Trash2, Layers
 } from 'lucide-react';
-import { motion, Variants } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Menu, PlanTier } from '../types';
 import { Button } from './ui/Button';
 import { PLAN_CONFIG, getNextTier } from '../utils/gastroPlans';
@@ -23,241 +24,166 @@ const containerVariants: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08
+      staggerChildren: 0.1
     }
   }
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50, damping: 15 } }
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 100, damping: 20 } }
 };
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
-  menus, onCreate, onEdit, currentPlan, onUpgrade, onRestoreDemo 
+  menus, onCreate, onEdit, onDelete, currentPlan, onUpgrade, onRestoreDemo 
 }) => {
   
   const planDetails = PLAN_CONFIG[currentPlan];
   const nextPlanKey = getNextTier(currentPlan);
   const nextPlan = nextPlanKey ? PLAN_CONFIG[nextPlanKey] : null;
 
-  // Mock Resource Usage
-  const storageUsed = currentPlan === 'basic' ? 0 : 450; 
-  const storageLimit = planDetails.limits.storage;
-  const storagePercent = storageLimit === 'unlimited' || storageLimit === 0 ? 0 : (storageUsed / storageLimit) * 100;
-
   return (
-    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 pb-20">
+    <div className="min-h-dvh bg-slate-50 font-sans selection:bg-indigo-100 pb-32 overflow-y-auto scrollbar-hide pt-safe">
       
       {/* Floating Glass Header */}
       <motion.div 
-        initial={{ y: -20, opacity: 0 }}
+        initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-40 px-4 md:px-6 pt-4 pb-2"
+        className="sticky top-0 z-40 px-4 md:px-8 py-4"
       >
-        <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-2xl p-3 md:p-4 flex items-center justify-between transition-all">
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
-               <span className="font-serif font-bold text-lg">G</span>
+        <div className="max-w-7xl mx-auto glass-effect rounded-[2rem] p-4 flex items-center justify-between transition-all">
+          <div className="flex items-center gap-4">
+             <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-900 rounded-[1.25rem] flex items-center justify-center text-white shadow-2xl shadow-slate-900/40 transform -rotate-3 hover:rotate-0 transition-transform">
+               <span className="font-serif font-bold text-xl">L</span>
              </div>
              <div className="flex flex-col">
-                <span className="font-serif font-bold text-slate-900 tracking-tight leading-none text-sm md:text-base">Gastro OS</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
-                   Pracovná plocha
-                </span>
+                <span className="font-serif font-bold text-slate-900 tracking-tight leading-none text-base md:text-lg">Luxe Menu Builder</span>
+                <div className="flex items-center gap-2 mt-1">
+                   <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest bg-indigo-600 text-white shadow-sm">
+                     {planDetails.label}
+                   </span>
+                   <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400 hidden sm:inline">OS v3.2</span>
+                </div>
              </div>
-             <span className="hidden sm:inline-flex ml-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200">
-               Balík {planDetails.label}
-             </span>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-6">
-            {/* Stats (Desktop) */}
-            {storageLimit !== 0 && (
-              <div className="hidden md:flex flex-col gap-1 w-32">
-                 <div className="flex justify-between text-[10px] uppercase font-bold text-slate-400">
-                    <span>Úložisko</span>
-                    <span>{storageLimit === 'unlimited' ? '∞' : `${Math.round(storagePercent)}%`}</span>
-                 </div>
-                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${storageLimit === 'unlimited' ? 10 : storagePercent}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full bg-emerald-500 rounded-full" 
-                    />
-                 </div>
-              </div>
-            )}
-            
+          <div className="flex items-center gap-3">
             {nextPlan && (
-              <Button size="sm" variant="gradient" onClick={onUpgrade} className="hidden md:flex">
-                <ArrowUpCircle className="w-4 h-4" /> Inovovať
+              <Button size="sm" variant="gradient" onClick={onUpgrade} className="hidden sm:flex rounded-xl h-10 px-4">
+                <ArrowUpCircle className="w-4 h-4 mr-2" /> Upgrade
               </Button>
             )}
-            
-            {/* Mobile Plus Button */}
-             <Button size="icon" onClick={onCreate} className="md:hidden rounded-xl">
-               <Plus className="w-5 h-5" />
+             <Button size="icon" onClick={onCreate} variant="primary" className="rounded-2xl h-12 w-12 shadow-xl shadow-indigo-500/30">
+               <Plus className="w-6 h-6" />
              </Button>
           </div>
         </div>
       </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-8">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 pt-12">
         
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 md:mb-10 pl-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-12"
         >
-          <h1 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 mb-2">
-            Dobré ráno.
+          <h1 className="text-4xl md:text-6xl font-serif font-bold text-slate-900 mb-4 tracking-tighter">
+            Vitajte v <span className="italic font-light opacity-60">Ateliéri.</span>
           </h1>
-          <p className="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed">
-            Váš digitálny ekosystém je aktívny. 
-            {nextPlan && <span className="text-indigo-600 font-medium cursor-pointer hover:underline" onClick={onUpgrade}> Odomknúť AI funkcie</span>}
+          <p className="text-slate-500 text-base md:text-xl max-w-xl leading-relaxed">
+            Spravujte svoje vizuálne menu s eleganciou a rýchlosťou AI.
           </p>
         </motion.div>
 
-        {/* Animated Modules Grid */}
+        {/* Dynamic Grid */}
         <motion.div 
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
         >
           
-          {/* 1. Menus Module (Primary) */}
-          <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2">
-            <div className="h-full bg-white rounded-[2rem] p-1 border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 flex flex-col relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+          {/* Main Menus List */}
+          <motion.div variants={itemVariants} className="col-span-1 sm:col-span-2 lg:col-span-2 row-span-2">
+            <div className="h-full bg-white rounded-[3rem] p-2 border border-slate-200 shadow-2xl hover:shadow-indigo-500/5 transition-all duration-700 flex flex-col relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-16 opacity-[0.02] pointer-events-none group-hover:scale-110 transition-transform duration-1000">
                  <Layout className="w-64 h-64 rotate-12" />
               </div>
               
-              <div className="p-6 md:p-8 flex-1 relative z-10 flex flex-col">
-                 <div className="flex items-center justify-between mb-6">
-                   <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-inner">
-                     <Layout className="w-6 h-6" />
+              <div className="p-8 md:p-10 flex-1 relative z-10 flex flex-col">
+                 <div className="flex items-center justify-between mb-8">
+                   <div className="flex flex-col">
+                      <h3 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">Vytvorené Menu</h3>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Stav: Aktívne</p>
                    </div>
-                   <Button onClick={onCreate} className="rounded-xl shadow-lg shadow-indigo-500/20">
-                     <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Nové Menu</span>
+                   <Button onClick={onCreate} variant="ghost" className="rounded-2xl hover:bg-slate-50 text-indigo-600 font-bold">
+                     <Plus className="w-4 h-4 mr-2" /> Nové
                    </Button>
                  </div>
                  
-                 <h3 className="text-xl md:text-2xl font-serif font-bold text-slate-900 mb-2">Digitálne Menu</h3>
-                 <p className="text-slate-500 text-sm mb-6 max-w-sm">Spravujte ponuku vašej reštaurácie pomocou AI architekta. Potiahni a pusti.</p>
-                 
-                 <div className="space-y-3 mt-auto">
-                   {menus.length === 0 ? (
-                     <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col items-center justify-center gap-4">
-                        <p className="text-slate-400 text-sm">Zatiaľ žiadne menu.</p>
-                        {onRestoreDemo && (
-                          <Button variant="ghost" size="sm" onClick={onRestoreDemo} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100">
-                             <Sparkles className="w-4 h-4 mr-2" /> Obnoviť ukážkové dáta
-                          </Button>
-                        )}
-                     </div>
-                   ) : (
-                     menus.slice(0, 3).map(menu => (
-                       <motion.div 
-                          key={menu.id} 
-                          whileHover={{ scale: 1.01, x: 4 }}
-                          onClick={() => onEdit(menu.id)} 
-                          className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-white cursor-pointer transition-all group/item"
-                        >
-                          <div className="flex items-center gap-3">
-                             <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                             <span className="font-bold text-slate-700 truncate max-w-[120px] sm:max-w-xs">{menu.name}</span>
+                 <div className="space-y-4">
+                   <AnimatePresence mode="popLayout">
+                    {menus.length === 0 ? (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 border-2 border-dashed border-slate-100 rounded-[2rem] bg-slate-50/50 flex flex-col items-center justify-center gap-6">
+                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
+                             {/* Fixed: Added missing Layers icon from lucide-react */}
+                             <Layers className="w-8 h-8 text-slate-200" />
                           </div>
-                          <div className="p-2 bg-white rounded-full text-slate-300 group-hover/item:text-indigo-600 transition-colors">
-                            <Edit2 className="w-4 h-4" />
-                          </div>
-                       </motion.div>
-                     ))
-                   )}
+                          <p className="text-slate-400 text-sm font-medium">Zatiaľ ste nevytvorili žiadne menu.</p>
+                          {onRestoreDemo && (
+                            <Button variant="secondary" size="sm" onClick={onRestoreDemo} className="rounded-xl px-6 h-10 border-slate-200">
+                               <Sparkles className="w-4 h-4 mr-2 text-indigo-500" /> Ukážkové dáta
+                            </Button>
+                          )}
+                      </motion.div>
+                    ) : (
+                      menus.map(menu => (
+                        <motion.div 
+                            key={menu.id} 
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            whileHover={{ y: -4, shadow: "0 20px 40px -20px rgba(0,0,0,0.1)" }}
+                            className="flex items-center justify-between p-5 rounded-[1.75rem] bg-white border border-slate-100 hover:border-indigo-300 cursor-pointer transition-all group/item shadow-sm"
+                          >
+                            <div className="flex items-center gap-5 flex-1 min-w-0" onClick={() => onEdit(menu.id)}>
+                               <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all">
+                                 <Layout className="w-5 h-5" />
+                               </div>
+                               <div className="flex flex-col min-w-0">
+                                  <span className="font-bold text-slate-800 text-base truncate">{menu.name}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono tracking-wider">{new Date(menu.createdAt).toLocaleDateString()} • {menu.theme}</span>
+                               </div>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); onEdit(menu.id); }}
+                                className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); onDelete(menu.id); }}
+                                className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                        </motion.div>
+                      ))
+                    )}
+                   </AnimatePresence>
                  </div>
               </div>
             </div>
           </motion.div>
 
-          {/* 2. Reservations Module */}
-          <ModuleCard 
-            title="Rezervácie" 
-            moduleKey="reservations"
-            icon={Calendar} 
-            description="Správa stolov."
-            plan={currentPlan}
-            requiredPlan="business"
-            onUpgrade={onUpgrade}
-            stats="12 dnes"
-            color="bg-emerald-50 text-emerald-600"
-          />
-
-          {/* 3. CRM Module */}
-          <ModuleCard 
-            title="Zákazníci" 
-            moduleKey="customers"
-            icon={Users} 
-            description="Vernostné dáta."
-            plan={currentPlan}
-            requiredPlan="corporate"
-            onUpgrade={onUpgrade}
-            stats="1,402 aktívnych"
-            color="bg-blue-50 text-blue-600"
-          />
-
-          {/* 4. Payments Module */}
-          <ModuleCard 
-            title="Platby" 
-            moduleKey="payments"
-            icon={CreditCard} 
-            description="Stripe Connect."
-            plan={currentPlan}
-            requiredPlan="enterprise"
-            onUpgrade={onUpgrade}
-            stats="12 400 €"
-            color="bg-purple-50 text-purple-600"
-          />
-
-          {/* 5. Analytics (Traffic) */}
-          <motion.div variants={itemVariants} className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300">
-             <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                   <Activity className="w-6 h-6" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Analytika</div>
-             </div>
-             <div>
-               <h4 className="font-bold text-slate-900 text-sm opacity-60">Mesačná návštevnosť</h4>
-               <div className="text-3xl font-serif font-bold text-slate-900 mt-1 tracking-tight">
-                 {planDetails.limits.traffic === 'limited' ? '2.4k' : '154k'}
-               </div>
-               <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                 <div className="bg-orange-400 h-full w-[65%]" />
-               </div>
-             </div>
-          </motion.div>
-          
-           {/* 6. Storage Module */}
-           <motion.div variants={itemVariants} className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300">
-             <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl">
-                   <Database className="w-6 h-6" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Cloud</div>
-             </div>
-             <div>
-               <h4 className="font-bold text-slate-900 text-sm opacity-60">Využité zdroje</h4>
-               <div className="text-3xl font-serif font-bold text-slate-900 mt-1 tracking-tight">
-                 {storageLimit === 0 ? '0MB' : (storageLimit === 'unlimited' ? '45GB' : `${storageUsed}MB`)}
-               </div>
-               <div className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                 {storageLimit === 0 ? <Lock className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                 {storageLimit === 0 ? 'Inovujte pre nahrávanie' : 'Hi-res podklady'}
-               </div>
-             </div>
-          </motion.div>
+          {/* Module Cards */}
+          <ModuleCard title="Rezervácie" icon={Calendar} description="Systém stolov" plan={currentPlan} requiredPlan="business" onUpgrade={onUpgrade} stats="8 aktívnych" color="bg-emerald-50 text-emerald-600" />
+          <ModuleCard title="Analytics" icon={Activity} description="Traffic & Sales" plan={currentPlan} requiredPlan="corporate" onUpgrade={onUpgrade} stats="14.2k návštev" color="bg-orange-50 text-orange-600" />
+          <ModuleCard title="Payments" icon={CreditCard} description="Direct Stripe" plan={currentPlan} requiredPlan="enterprise" onUpgrade={onUpgrade} stats="0.00 €" color="bg-blue-50 text-blue-600" />
+          <ModuleCard title="Cloud Asset" icon={Database} description="High-res storage" plan={currentPlan} requiredPlan="business" onUpgrade={onUpgrade} stats="420 MB" color="bg-pink-50 text-pink-600" />
 
         </motion.div>
       </div>
@@ -267,7 +193,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
 const ModuleCard: React.FC<{
   title: string;
-  moduleKey: keyof typeof PLAN_CONFIG['basic']['modules'];
   icon: any;
   description: string;
   plan: PlanTier;
@@ -275,48 +200,38 @@ const ModuleCard: React.FC<{
   onUpgrade: () => void;
   stats: string;
   color: string;
-}> = ({ title, moduleKey, icon: Icon, description, plan, requiredPlan, onUpgrade, stats, color }) => {
-  const isLocked = !PLAN_CONFIG[plan].modules[moduleKey];
-  const reqPlanLabel = PLAN_CONFIG[requiredPlan].label;
+}> = ({ title, icon: Icon, description, plan, requiredPlan, onUpgrade, stats, color }) => {
+  const isLocked = !PLAN_CONFIG[plan].modules[title.toLowerCase() as any] && title.toLowerCase() !== 'analytics' && title.toLowerCase() !== 'cloud asset';
+  
+  // Custom logic for demonstration locking
+  const effectivelyLocked = isLocked || (requiredPlan === 'corporate' && plan === 'basic') || (requiredPlan === 'enterprise' && plan !== 'enterprise');
 
   return (
     <motion.div 
       variants={itemVariants}
-      className={`relative bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-h-[220px]`}
+      className="relative bg-white rounded-[2.5rem] p-7 border border-slate-200 shadow-sm flex flex-col justify-between overflow-hidden group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-[220px]"
     >
-      
-      {isLocked && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center text-center p-6">
-          <motion.div 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center mb-3 shadow-xl"
-          >
-            <Lock className="w-5 h-5" />
+      {effectivelyLocked && (
+        <div className="absolute inset-0 bg-white/40 backdrop-blur-md z-20 flex flex-col items-center justify-center text-center p-8 animate-in fade-in">
+          <motion.div whileHover={{ scale: 1.1 }} className="w-14 h-14 bg-slate-900 text-white rounded-[1.25rem] flex items-center justify-center mb-4 shadow-2xl">
+            <Lock className="w-6 h-6" />
           </motion.div>
-          <h4 className="font-bold text-slate-900 mb-1">Zamknuté</h4>
-          <p className="text-xs text-slate-500 mb-4">Dostupné v balíku {reqPlanLabel}</p>
-          <Button size="sm" onClick={onUpgrade} variant="secondary" className="w-full justify-center rounded-xl">
-            Inovovať
-          </Button>
+          <h4 className="font-serif font-bold text-slate-900 text-sm mb-1">Premium Modul</h4>
+          <button onClick={onUpgrade} className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 hover:underline">Odomknúť v {PLAN_CONFIG[requiredPlan].label}</button>
         </div>
       )}
 
       <div>
-        <div className="flex items-start justify-between mb-6">
-          <div className={`p-3 rounded-2xl ${isLocked ? 'bg-slate-100 text-slate-400' : color}`}>
-            <Icon className="w-6 h-6" />
-          </div>
+        <div className={`p-4 rounded-2xl w-fit mb-6 ${color} transform group-hover:rotate-6 transition-transform`}>
+          <Icon className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-serif font-bold text-slate-900 mb-1 leading-tight">{title}</h3>
-        <p className="text-sm text-slate-500 font-medium">{description}</p>
+        <h3 className="text-xl font-serif font-bold text-slate-900 mb-1">{title}</h3>
+        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{description}</p>
       </div>
       
-      <div className="pt-6 mt-4 border-t border-slate-50">
-        <div className="flex items-center justify-between text-sm">
-           <span className="text-slate-400 font-medium text-xs uppercase tracking-wider">Stav</span>
-           <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">{isLocked ? '---' : stats}</span>
-        </div>
+      <div className="pt-6 mt-4 border-t border-slate-50 flex items-center justify-between">
+         <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Live Data</span>
+         <span className="font-mono text-xs font-bold text-slate-600">{effectivelyLocked ? '--' : stats}</span>
       </div>
     </motion.div>
   );
