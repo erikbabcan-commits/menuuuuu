@@ -1,18 +1,20 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, GripVertical, Plus, Trash2, 
   Sparkles, Save, Palette, Layers, Eye, Smile, Edit2, Zap,
   Settings, Link as LinkIcon, Type as TypeIcon, X, LayoutTemplate, Image as ImageIcon, DollarSign,
-  Monitor, Smartphone, Clock, Leaf, Info, Star, Globe
+  Monitor, Smartphone, Clock, Leaf, Info, Star, Globe, Loader2
 } from 'lucide-react';
 import { Menu, MenuItem, MenuTheme, AiGeneratedItem, PlanTier, AccentColor, FontFamily, MealTime, Language } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
 import { generateMenuStructure, generateDishDescription } from '../services/geminiService';
-import { IconPicker } from './IconPicker';
-import { iconMap } from '../utils/icons';
 import { accentColors } from '../utils/themeStyles';
+import { iconMap } from '../utils/icons';
+
+// Lazy load IconPicker to optimize bundle size and network requests
+const IconPicker = lazy(() => import('./IconPicker').then(module => ({ default: module.IconPicker })));
 
 interface BuilderProps {
   menuId: string | null;
@@ -25,6 +27,24 @@ interface BuilderProps {
 
 const DIETARY_TAG_OPTIONS: ('vegan' | 'vegetarian' | 'paleo' | 'keto' | 'gluten-free')[] = ['vegan', 'vegetarian', 'paleo', 'keto', 'gluten-free'];
 const AVAILABLE_LANGS: Language[] = ['sk', 'en', 'de'];
+
+// Premium Skeleton Component
+// Fix: Added key to props type to satisfy React's requirement for mapped elements in TypeScript
+const SkeletonItem = ({ index }: { index: number, key?: React.Key }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.1 }}
+    className="bg-white border border-slate-300 p-6 rounded-3xl flex items-center gap-5 shadow-sm animate-pulse"
+  >
+    <div className="w-5 h-8 bg-slate-100 rounded-md" />
+    <div className="flex-1 space-y-2">
+      <div className="h-4 w-3/4 bg-slate-100 rounded-lg animate-shimmer" />
+      <div className="h-2.5 w-1/4 bg-slate-50 rounded-lg" />
+    </div>
+    <div className="w-10 h-10 bg-slate-50 rounded-2xl border border-slate-200" />
+  </motion.div>
+);
 
 export const Builder: React.FC<BuilderProps> = ({ 
   menuId, onBack, onSave, initialData 
@@ -229,21 +249,57 @@ export const Builder: React.FC<BuilderProps> = ({
              </div>
 
              <div className="space-y-5 pt-4">
-                {menuData.items.map(item => (
-                  <div key={item.id} className="group bg-white hover:bg-slate-50 border border-slate-300 hover:border-indigo-400 p-6 rounded-3xl flex items-center gap-5 transition-all hover:shadow-lg cursor-default shadow-sm">
-                     <GripVertical className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                     <div className="flex-1 min-w-0">
-                        <p className="text-base font-bold text-slate-950 truncate">{item.label}</p>
-                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mt-0.5">{item.price || 'Bez ceny'}</p>
-                     </div>
-                     <button onClick={() => updateUiState({ editingItemId: item.id })} className="p-3 bg-white text-slate-600 hover:text-indigo-700 rounded-2xl shadow-md border border-slate-300 hover:border-indigo-300 transition-all"><Edit2 className="w-5 h-5" /></button>
-                  </div>
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {uiState.isGenerating ? (
+                    [1, 2, 3, 4].map((i) => <SkeletonItem key={`skeleton-${i}`} index={i} />)
+                  ) : (
+                    menuData.items.map(item => (
+                      <motion.div 
+                        key={item.id} 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="group bg-white hover:bg-slate-50 border border-slate-300 hover:border-indigo-400 p-6 rounded-3xl flex items-center gap-5 transition-all hover:shadow-lg cursor-default shadow-sm relative"
+                      >
+                         <GripVertical className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                         <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                               {item.icon && (
+                                 <div className="w-6 h-6 flex items-center justify-center text-indigo-600">
+                                   {React.createElement(iconMap[item.icon] || Layers, { className: "w-4 h-4" })}
+                                 </div>
+                               )}
+                               <p className="text-base font-bold text-slate-950 truncate">{item.label}</p>
+                            </div>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mt-0.5">{item.price || 'Bez ceny'}</p>
+                         </div>
+                         <div className="flex gap-1">
+                           <button 
+                            onClick={() => updateUiState({ iconPickerOpen: uiState.iconPickerOpen === item.id ? null : item.id })}
+                            className={`p-3 bg-white ${item.icon ? 'text-indigo-600' : 'text-slate-600'} hover:text-indigo-700 rounded-2xl shadow-md border border-slate-300 hover:border-indigo-300 transition-all`}
+                           >
+                             <Smile className="w-5 h-5" />
+                           </button>
+                           <button onClick={() => updateUiState({ editingItemId: item.id })} className="p-3 bg-white text-slate-600 hover:text-indigo-700 rounded-2xl shadow-md border border-slate-300 hover:border-indigo-300 transition-all"><Edit2 className="w-5 h-5" /></button>
+                         </div>
+                         
+                         <Suspense fallback={null}>
+                           <IconPicker 
+                            isOpen={uiState.iconPickerOpen === item.id} 
+                            onClose={() => updateUiState({ iconPickerOpen: null })}
+                            selectedIcon={item.icon}
+                            onSelect={(icon) => updateItem(item.id, { icon })}
+                            placement="bottom"
+                           />
+                         </Suspense>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
              </div>
           </section>
         </motion.div>
 
-        {/* Live Preview Area Area */}
+        {/* Live Preview Area */}
         <div className="flex-1 bg-slate-200/40 p-10 md:p-16 overflow-hidden flex flex-col items-center gap-12 relative shadow-inner">
            <div className="bg-white/95 backdrop-blur-2xl px-6 py-3 rounded-3xl shadow-brutal border border-slate-300 flex gap-10 items-center z-20">
               <div className="flex p-1.5 bg-slate-100 rounded-2xl border border-slate-300 shadow-inner-3d">
@@ -272,8 +328,15 @@ export const Builder: React.FC<BuilderProps> = ({
       <AnimatePresence>
         {uiState.editingItemId && editingItem && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-8">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/70 backdrop-blur-xl" />
-             <motion.div layoutId="item-modal" className="relative w-full max-w-5xl bg-white rounded-[4rem] shadow-[0_60px_120px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col max-h-[92dvh] border border-slate-300">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null, iconPickerOpen: null })} className="absolute inset-0 bg-slate-950/70 backdrop-blur-xl" />
+             <motion.div 
+               layoutId="item-modal" 
+               initial={{ opacity: 0, scale: 0.8, y: 50 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.8, y: 50 }}
+               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+               className="relative w-full max-w-5xl bg-white rounded-[4rem] shadow-[0_60px_120px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col max-h-[92dvh] border border-slate-300"
+             >
                 <div className="p-12 border-b border-slate-300 flex items-center justify-between bg-slate-50/80">
                    <div className="flex items-center gap-7">
                       <div className={`w-16 h-16 rounded-3xl ${currentAccent.bg} text-white flex items-center justify-center shadow-2xl border border-black/20`}><Settings className="w-8 h-8" /></div>
@@ -282,7 +345,7 @@ export const Builder: React.FC<BuilderProps> = ({
                          <p className="text-xs text-slate-600 font-bold uppercase tracking-[0.3em] mt-1">Precízna správa kulinárskeho portfólia</p>
                       </div>
                    </div>
-                   <button onClick={() => updateUiState({ editingItemId: null })} className="p-5 hover:bg-slate-100 rounded-full transition-all border border-transparent hover:border-slate-300 text-slate-400 hover:text-slate-950"><X className="w-8 h-8" /></button>
+                   <button onClick={() => updateUiState({ editingItemId: null, iconPickerOpen: null })} className="p-5 hover:bg-slate-100 rounded-full transition-all border border-transparent hover:border-slate-300 text-slate-400 hover:text-slate-950"><X className="w-8 h-8" /></button>
                 </div>
 
                 <div className="p-12 overflow-y-auto space-y-14 scrollbar-hide">
@@ -325,6 +388,42 @@ export const Builder: React.FC<BuilderProps> = ({
                       </div>
 
                       <div className="space-y-10">
+                         {/* Icon Picker Field */}
+                         <div className="space-y-4 relative">
+                            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-widest px-1 flex items-center gap-2"><Smile className="w-4 h-4" /> Ikona položky</label>
+                            <div className="flex items-center gap-4">
+                               <button 
+                                onClick={() => updateUiState({ iconPickerOpen: uiState.iconPickerOpen === 'modal' ? null : 'modal' })}
+                                className={`w-20 h-20 rounded-[2rem] border-2 transition-all flex items-center justify-center shadow-md bg-white ${editingItem.icon ? 'border-indigo-400 text-indigo-600' : 'border-dashed border-slate-300 text-slate-400 hover:border-slate-400'}`}
+                               >
+                                 {editingItem.icon ? (
+                                   React.createElement(iconMap[editingItem.icon] || Layers, { className: "w-8 h-8" })
+                                 ) : (
+                                   <Plus className="w-6 h-6" />
+                                 )}
+                               </button>
+                               <div className="flex-1 space-y-1">
+                                  <p className="text-sm font-bold text-slate-900">{editingItem.icon ? editingItem.icon : 'Žiadna ikona'}</p>
+                                  <button 
+                                    onClick={() => updateUiState({ iconPickerOpen: uiState.iconPickerOpen === 'modal' ? null : 'modal' })}
+                                    className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-800"
+                                  >
+                                    {editingItem.icon ? 'Zmeniť symbol' : 'Priradiť symbol'}
+                                  </button>
+                               </div>
+                            </div>
+                            
+                            <Suspense fallback={null}>
+                              <IconPicker 
+                                isOpen={uiState.iconPickerOpen === 'modal'} 
+                                onClose={() => updateUiState({ iconPickerOpen: null })}
+                                selectedIcon={editingItem.icon}
+                                onSelect={(icon) => updateItem(editingItem.id, { icon })}
+                                placement="bottom"
+                              />
+                            </Suspense>
+                         </div>
+
                          <div className="space-y-6">
                             <label className="text-[11px] font-bold text-slate-700 uppercase tracking-widest px-1 flex items-center gap-2"><Star className="w-4 h-4" /> Prémiové markery</label>
                             <div className="grid grid-cols-1 gap-5">
@@ -378,17 +477,27 @@ export const Builder: React.FC<BuilderProps> = ({
                            <Sparkles className={`w-4.5 h-4.5 ${uiState.isGeneratingDesc ? 'animate-spin' : ''}`} /> {uiState.isGeneratingDesc ? 'Skladám text...' : 'AI Poetický Popis'}
                          </button>
                       </div>
-                      <textarea 
-                        value={editingItem.translations?.[editingLang]?.description || (editingLang === 'sk' ? editingItem.description : '')} 
-                        onChange={(e) => updateItemTranslation(editingItem.id, editingLang, 'description', e.target.value)} 
-                        className="w-full h-44 bg-slate-50 border border-slate-300 rounded-[2.5rem] p-10 text-lg italic font-light outline-none focus:bg-white focus:border-indigo-600 shadow-inner-3d transition-all resize-none scrollbar-hide leading-relaxed" 
-                        placeholder="Zadajte poetický a zmyselný popis vášho pokrmu, ktorý nadchne hostí..." 
-                      />
+                      <div className="relative">
+                        <textarea 
+                          value={uiState.isGeneratingDesc ? '' : (editingItem.translations?.[editingLang]?.description || (editingLang === 'sk' ? editingItem.description : ''))} 
+                          onChange={(e) => updateItemTranslation(editingItem.id, editingLang, 'description', e.target.value)} 
+                          disabled={uiState.isGeneratingDesc}
+                          className={`w-full h-44 bg-slate-50 border border-slate-300 rounded-[2.5rem] p-10 text-lg italic font-light outline-none focus:bg-white focus:border-indigo-600 shadow-inner-3d transition-all resize-none scrollbar-hide leading-relaxed ${uiState.isGeneratingDesc ? 'opacity-50' : ''}`} 
+                          placeholder={uiState.isGeneratingDesc ? '' : "Zadajte poetický a zmyselný popis vášho pokrmu, ktorý nadchne hostí..."} 
+                        />
+                        {uiState.isGeneratingDesc && (
+                          <div className="absolute inset-0 p-10 pointer-events-none">
+                             <div className="h-6 w-3/4 bg-slate-200/50 rounded-lg animate-pulse mb-4" />
+                             <div className="h-6 w-1/2 bg-slate-200/50 rounded-lg animate-pulse mb-4" />
+                             <div className="h-6 w-2/3 bg-slate-200/50 rounded-lg animate-pulse" />
+                          </div>
+                        )}
+                      </div>
                    </div>
                 </div>
 
                 <div className="p-12 bg-slate-950 border-t border-slate-800 flex gap-6 shrink-0 shadow-2xl">
-                   <Button variant="primary" className="flex-1 h-20 rounded-3xl text-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 shadow-[0_20px_40px_rgba(79,70,229,0.4)] font-bold" onClick={() => updateUiState({ editingItemId: null })}>Uložiť zmeny a Syncovať</Button>
+                   <Button variant="primary" className="flex-1 h-20 rounded-3xl text-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 shadow-[0_20px_40px_rgba(79,70,229,0.4)] font-bold" onClick={() => updateUiState({ editingItemId: null, iconPickerOpen: null })}>Uložiť zmeny a Syncovať</Button>
                 </div>
              </motion.div>
           </div>

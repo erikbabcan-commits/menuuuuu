@@ -1,5 +1,4 @@
-
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -15,9 +14,10 @@ interface State {
  * Robustný Error Boundary s presným typovaním pre state a props.
  * Zachytáva neočakávané chyby pri renderovaní a poskytuje luxusný fallback.
  */
-// Fix: Use React.Component and property initialization to resolve "Property 'state' does not exist" errors
-export class ErrorBoundary extends React.Component<Props, State> {
-  public override state: State = {
+// Fix: Explicitly import and extend Component to resolve issues with base class property detection
+export class ErrorBoundary extends Component<Props, State> {
+  // Fix: Removed 'override' modifier which was causing compilation errors when base class detection failed
+  public state: State = {
     hasError: false
   };
 

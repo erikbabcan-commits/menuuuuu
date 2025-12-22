@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { iconMap, iconCategories } from '../utils/icons';
-import { Search, X, Smile, Filter } from 'lucide-react';
+import { Search, X, Smile, Filter, Loader2 } from 'lucide-react';
 
 interface IconPickerProps {
   selectedIcon?: string;
@@ -10,6 +10,11 @@ interface IconPickerProps {
   placement?: 'top' | 'bottom';
 }
 
+/**
+ * Optimized IconPicker component.
+ * When used with React.lazy, the heavy Lucide icon library (via iconMap)
+ * is only loaded when the picker is actually needed.
+ */
 export const IconPicker: React.FC<IconPickerProps> = ({ 
   selectedIcon, 
   onSelect, 
@@ -21,7 +26,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Reset vyhľadávania pri zatvorení
+  // Reset search on close
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm('');
@@ -29,7 +34,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     }
   }, [isOpen]);
 
-  // Kliknutie mimo komponentu ho zatvorí
+  // Handle outside clicks
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
@@ -43,19 +48,16 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
-  // Efektívne filtrovanie ikon pomocou useMemo
+  // Efficient icon filtering
   const filteredIcons = useMemo(() => {
     let result: string[] = [];
 
     if (activeCategory) {
-      // Filtrovanie podľa vybranej kategórie
       result = iconCategories[activeCategory] || [];
     } else {
-      // Ak nie je kategória, prehľadávame všetky
       result = Object.keys(iconMap);
     }
 
-    // Aplikácia textového vyhľadávania
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(name => 
@@ -81,7 +83,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       <button
         key={name}
         onClick={() => { onSelect(name); onClose(); }}
-        className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 aspect-square ${isSelected ? 'bg-indigo-50 text-indigo-600 ring-2 ring-indigo-200' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
+        className={`p-2 rounded-lg flex items-center justify-center transition-all duration-200 aspect-square ${isSelected ? 'bg-indigo-50 text-indigo-600 ring-2 ring-indigo-200 shadow-inner' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900 border border-transparent hover:border-slate-200'}`}
         title={name}
       >
         <Icon className="w-5 h-5" />
@@ -92,31 +94,31 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   return (
     <div 
       ref={pickerRef}
-      className={`absolute left-0 w-80 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-200 z-50 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[450px] ${placementClasses}`}
+      className={`absolute left-0 w-80 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-300 z-[60] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[450px] ${placementClasses}`}
     >
       {/* Search Header */}
-      <div className="p-3 bg-slate-50/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-10 space-y-3">
-        <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+      <div className="p-4 bg-slate-50/90 backdrop-blur-md border-b border-slate-300 sticky top-0 z-10 space-y-3">
+        <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 border border-slate-300 shadow-inner focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
-            className="flex-1 text-sm outline-none bg-transparent placeholder:text-slate-400 text-slate-700"
-            placeholder="Hľadať ikony..."
+            className="flex-1 text-sm outline-none bg-transparent placeholder:text-slate-400 text-slate-900 font-medium"
+            placeholder="Vyhľadať symbol..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             autoFocus
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} className="p-0.5 rounded-full hover:bg-slate-100 text-slate-400">
-              <X className="w-3 h-3" />
+            <button onClick={() => setSearchTerm('')} className="p-1 rounded-full hover:bg-slate-100 text-slate-400">
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* Kategórie / Filtre */}
+        {/* Categories */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button 
             onClick={() => setActiveCategory(null)}
-            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${!activeCategory ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300'}`}
+            className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${!activeCategory ? 'bg-slate-950 text-white border-slate-800 shadow-md' : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'}`}
           >
             Všetky
           </button>
@@ -124,7 +126,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             <button 
               key={cat}
               onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300'}`}
+              className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'}`}
             >
               {cat}
             </button>
@@ -133,40 +135,40 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       </div>
 
       {/* Info Bar */}
-      <div className="px-4 py-2 bg-white border-b border-slate-50 flex items-center justify-between">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+      <div className="px-5 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
           {searchTerm || activeCategory ? (
             <>
               <Filter className="w-3 h-3" />
               Nájdené: {filteredIcons.length}
             </>
           ) : (
-            'Prehľadávať knižnicu'
+            'Prehľadávať Ateliér Ikon'
           )}
         </span>
         <button 
           onClick={() => { onSelect(''); onClose(); }} 
-          className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest hover:text-indigo-700"
+          className="text-[9px] font-bold text-rose-500 uppercase tracking-widest hover:text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100 transition-all"
         >
           Odstrániť
         </button>
       </div>
 
       {/* Content Area */}
-      <div className="overflow-y-auto p-3 bg-white scrollbar-hide flex-1 min-h-[150px]">
+      <div className="overflow-y-auto p-4 bg-white scrollbar-hide flex-1 min-h-[200px]">
         {filteredIcons.length > 0 ? (
-          <div className="grid grid-cols-6 gap-1.5">
+          <div className="grid grid-cols-6 gap-2">
             {filteredIcons.map(name => renderIconBtn(name))}
           </div>
         ) : (
-          <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
-              <Smile className="w-6 h-6 opacity-20" />
+          <div className="py-16 text-center text-xs text-slate-400 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-200 shadow-inner">
+              <Smile className="w-8 h-8 opacity-10" />
             </div>
-            <p className="font-medium">Nenašli sme žiadne zodpovedajúce ikony</p>
+            <p className="font-bold uppercase tracking-widest opacity-60">Symbol nebol nájdený</p>
             <button 
               onClick={() => { setSearchTerm(''); setActiveCategory(null); }}
-              className="text-indigo-600 font-bold hover:underline"
+              className="text-indigo-600 font-bold hover:underline bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100"
             >
               Resetovať filtre
             </button>
@@ -174,9 +176,9 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         )}
       </div>
       
-      {/* Footer / Tip */}
-      <div className="p-3 bg-slate-50 text-[9px] text-slate-400 text-center font-medium border-t border-slate-100">
-        Kliknite na ikonu pre výber
+      {/* Footer */}
+      <div className="p-4 bg-slate-50 text-[10px] text-slate-500 text-center font-bold border-t border-slate-300 uppercase tracking-widest">
+        Knižnica Luxury Studio
       </div>
     </div>
   );
