@@ -1,38 +1,29 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-import { AiGeneratedItem, MenuItem } from "../types";
+import { AiGeneratedItem } from "../types";
 import { generateLocalMenu } from "./localGenerator";
 
-const cleanJson = (text: string): string => {
-  if (!text) return "[]";
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  return cleaned;
-};
-
-// Simulated delay for better UX (perceived intelligence)
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Generuje štruktúru menu pomocou Gemini 3 Pro s hlbokým uvažovaním.
+ */
 export const generateMenuStructure = async (description: string): Promise<AiGeneratedItem[]> => {
-  // If no API key, use Local Generator
   if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
-    await sleep(1200); // Realistic local feel
+    await sleep(1200);
     return generateLocalMenu(description);
   }
 
   try {
+    // Inicializácia priamo vo funkcii pre zabezpečenie aktuálneho kľúča
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = "gemini-3-flash-preview";
     
     const response = await ai.models.generateContent({
-      model,
-      contents: `Generate a luxury website menu structure for: ${description}. 
-      Target audience: High-end clientele. 
-      Language: Slovak.
-      Return a JSON array of objects with 'label', 'url', and optional 'children' array.`,
+      model: 'gemini-3-pro-preview',
+      contents: `Vytvor luxusnú štruktúru webového menu pre: ${description}. 
+      Zameraj sa na prémiovú gastronómiu. Jazyk: Slovenčina.
+      Vráť pole objektov s 'label', 'description' (Michelin štýl), 'price' (formát napr. 24€), 'url' a voliteľným polom 'children'.`,
       config: {
+        thinkingConfig: { thinkingBudget: 16384 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -40,6 +31,8 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
             type: Type.OBJECT,
             properties: {
               label: { type: Type.STRING },
+              description: { type: Type.STRING },
+              price: { type: Type.STRING },
               url: { type: Type.STRING },
               children: {
                 type: Type.ARRAY,
@@ -47,6 +40,8 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
                   type: Type.OBJECT,
                   properties: {
                     label: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    price: { type: Type.STRING },
                     url: { type: Type.STRING }
                   },
                   required: ["label", "url"]
@@ -61,35 +56,42 @@ export const generateMenuStructure = async (description: string): Promise<AiGene
 
     const text = response.text;
     if (!text) return generateLocalMenu(description);
-    
-    return JSON.parse(cleanJson(text)) as AiGeneratedItem[];
+    return JSON.parse(text) as AiGeneratedItem[];
   } catch (error) {
-    console.warn("Gemini API error, falling back to local generator:", error);
+    console.error("Gemini Structure Generation Error:", error);
     return generateLocalMenu(description);
   }
 };
 
-export const optimizeMenuStructure = async (items: MenuItem[]): Promise<MenuItem[]> => {
-  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') return items;
+/**
+ * Generuje luxusný popis jedla pomocou Gemini 3 Flash.
+ */
+export const generateDishDescription = async (dishName: string): Promise<string> => {
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
+    return "Exkluzívna špecialita pripravená z najčerstvejších surovín pod dohľadom nášho šéfkuchára.";
+  }
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = "gemini-3-flash-preview";
-    const itemsJson = JSON.stringify(items.map(({ id, label, url, depth }) => ({ id, label, url, depth })));
-    
     const response = await ai.models.generateContent({
-      model,
-      contents: `Reorder these menu items for better UX. Keep original IDs. Language: Slovak. Input: ${itemsJson}`,
-      config: { responseMimeType: "application/json" }
+      model: 'gemini-3-flash-preview',
+      contents: `Vytvor jeden krátky, poetický a luxusný popis pre jedlo: ${dishName}. Maximálne 12 slov. Jazyk: Slovenčina.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            description: { type: Type.STRING }
+          },
+          required: ["description"]
+        }
+      }
     });
 
-    const text = response.text;
-    if (!text) return items;
-
-    const reorderedSimple = JSON.parse(cleanJson(text)) as {id: string}[];
-    const itemMap = new Map(items.map(i => [i.id, i]));
-    return reorderedSimple.map(s => itemMap.get(s.id)).filter(Boolean) as MenuItem[];
+    const result = JSON.parse(response.text || "{}");
+    return result.description || "Gastronomický zážitok spájajúci tradíciu s modernou technikou.";
   } catch (e) {
-    return items;
+    console.error("Gemini Description Generation Error:", e);
+    return "Gastronomický zážitok spájajúci tradíciu s modernou technikou.";
   }
 };

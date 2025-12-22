@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback, useMemo } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowLeft, GripVertical, Plus, Trash2, ChevronRight, ChevronLeft, 
-  Sparkles, Save, Palette, Layers, Eye, Eraser, TrendingUp, Smile, Edit2, Zap, Coffee, Utensils, Wine
+  ArrowLeft, GripVertical, Plus, Trash2, 
+  Sparkles, Save, Palette, Layers, Eye, Smile, Edit2, Zap,
+  Settings, Link as LinkIcon, Type as TypeIcon, X, LayoutTemplate, Image as ImageIcon, DollarSign,
+  Monitor, Smartphone, Clock, Leaf, Info, Star, Globe
 } from 'lucide-react';
-import { Menu, MenuItem, MenuTheme, AiGeneratedItem, PlanTier } from '../types';
+import { Menu, MenuItem, MenuTheme, AiGeneratedItem, PlanTier, AccentColor, FontFamily, MealTime, Language } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
-import { generateMenuStructure } from '../services/geminiService';
-import { generateLocalMenu } from '../services/localGenerator';
+import { generateMenuStructure, generateDishDescription } from '../services/geminiService';
 import { IconPicker } from './IconPicker';
 import { iconMap } from '../utils/icons';
+import { accentColors } from '../utils/themeStyles';
 
 interface BuilderProps {
   menuId: string | null;
@@ -21,247 +24,361 @@ interface BuilderProps {
   onUpgrade: () => void;
 }
 
-const QUICK_TEMPLATES = [
-  { id: 'fine', label: 'Fine Dining', icon: Wine, prompt: 'luxusná reštaurácia fine dining' },
-  { id: 'cafe', label: 'Kaviareň', icon: Coffee, prompt: 'moderná kaviareň' },
-  { id: 'bistro', label: 'Modern Bistro', icon: Utensils, prompt: 'trendy bistro' },
-];
+const DIETARY_TAG_OPTIONS: ('vegan' | 'vegetarian' | 'paleo' | 'keto' | 'gluten-free')[] = ['vegan', 'vegetarian', 'paleo', 'keto', 'gluten-free'];
+const AVAILABLE_LANGS: Language[] = ['sk', 'en', 'de'];
 
 export const Builder: React.FC<BuilderProps> = ({ 
   menuId, onBack, onSave, initialData 
 }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
-  const [items, setItems] = useState<MenuItem[]>(initialData?.items || []);
-  const [name, setName] = useState(initialData?.name || 'Nové Menu');
-  const [theme, setTheme] = useState<MenuTheme>(initialData?.theme || 'glass');
-  const [prompt, setPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [iconPickerOpen, setIconPickerOpen] = useState<string | null>(null);
+  const [editingLang, setEditingLang] = useState<Language>('sk');
+  
+  const [menuData, setMenuData] = useState<Omit<Menu, 'id' | 'createdAt'>>({
+    name: initialData?.name || 'Nové Menu',
+    items: initialData?.items || [],
+    theme: initialData?.theme || 'glass',
+    accentColor: initialData?.accentColor || 'indigo',
+    fontFamily: initialData?.fontFamily || 'serif',
+    borderRadius: initialData?.borderRadius || 'md',
+    heroImageUrl: initialData?.heroImageUrl || '',
+    activeLanguages: initialData?.activeLanguages || ['sk']
+  });
 
-  const processGeneratedData = (data: AiGeneratedItem[]) => {
-    const newItems: MenuItem[] = [];
-    const processNode = (node: AiGeneratedItem, depth: number) => {
-      newItems.push({ id: crypto.randomUUID(), label: node.label, url: node.url || '#', depth });
-      if (node.children) node.children.forEach(child => processNode(child, depth + 1));
-    };
-    data.forEach(root => processNode(root, 0));
-    setItems(newItems);
+  const [uiState, setUiState] = useState({
+    prompt: '',
+    isGenerating: false,
+    isGeneratingDesc: false,
+    iconPickerOpen: null as string | null,
+    editingItemId: null as string | null,
+    previewDevice: 'desktop' as 'desktop' | 'mobile'
+  });
+
+  const updateMenuData = useCallback((updates: Partial<typeof menuData>) => {
+    setMenuData(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const updateUiState = useCallback((updates: Partial<typeof uiState>) => {
+    setUiState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const updateItem = useCallback((id: string, updates: Partial<MenuItem>) => {
+    setMenuData(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === id ? { ...item, ...updates } : item)
+    }));
+  }, []);
+
+  const updateItemTranslation = (id: string, lang: Language, field: 'label' | 'description', value: string) => {
+    setMenuData(prev => ({
+      ...prev,
+      items: prev.items.map(item => {
+        if (item.id !== id) return item;
+        const translations = { ...(item.translations || {}) };
+        translations[lang] = { ...(translations[lang] || { label: '', description: '' }), [field]: value };
+        // Ak aktualizujeme primárny jazyk, zmeňme aj koreňové pole pre kompatibilitu
+        const rootUpdates = lang === 'sk' ? { [field]: value } : {};
+        return { ...item, translations, ...rootUpdates };
+      })
+    }));
   };
 
-  const handleGenerate = async (p?: string) => {
-    const targetPrompt = p || prompt;
-    if (!targetPrompt.trim()) return;
-    setIsGenerating(true);
+  const handleGenerate = useCallback(async () => {
+    if (!uiState.prompt.trim()) return;
+    updateUiState({ isGenerating: true });
     try {
-      const data = await generateMenuStructure(targetPrompt);
-      processGeneratedData(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsGenerating(false);
+      const data = await generateMenuStructure(uiState.prompt);
+      const newItems: MenuItem[] = [];
+      const processNode = (node: AiGeneratedItem, depth: number) => {
+        newItems.push({ 
+          id: crypto.randomUUID(), 
+          label: node.label, 
+          description: node.description,
+          price: node.price,
+          url: node.url || '#', 
+          depth,
+          schedule: 'all',
+          translations: { sk: { label: node.label, description: node.description } }
+        });
+        if (node.children) node.children.forEach(child => processNode(child, depth + 1));
+      };
+      data.forEach(root => processNode(root, 0));
+      updateMenuData({ items: newItems });
       setActiveTab('preview');
+    } finally {
+      updateUiState({ isGenerating: false });
     }
-  };
+  }, [uiState.prompt, updateMenuData, updateUiState]);
 
-  const handleQuickTemplate = (p: string) => {
-    const data = generateLocalMenu(p);
-    processGeneratedData(data);
-    setActiveTab('preview');
-  };
+  const handleSaveClick = useCallback(() => {
+    onSave({ 
+      ...menuData, 
+      id: menuId || crypto.randomUUID(), 
+      createdAt: initialData?.createdAt || Date.now() 
+    } as Menu);
+  }, [menuData, menuId, initialData, onSave]);
 
-  const updateItem = (id: string, updates: Partial<MenuItem>) => {
-    setItems(items.map(item => item.id === id ? { ...item, ...updates } : item));
-  };
+  const addItem = useCallback(() => {
+    const id = crypto.randomUUID();
+    const newItem: MenuItem = { id, label: 'Nová položka', url: '#', depth: 0, schedule: 'all', translations: { sk: { label: 'Nová položka' } } };
+    setMenuData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+    setUiState(prev => ({ ...prev, editingItemId: id }));
+  }, []);
+
+  const editingItem = useMemo(() => 
+    menuData.items.find(i => i.id === uiState.editingItemId),
+  [menuData.items, uiState.editingItemId]);
+
+  const currentAccent = accentColors[menuData.accentColor] || accentColors.slate;
 
   return (
     <div className="h-dvh w-full flex flex-col bg-slate-50 overflow-hidden pt-safe">
-      {/* Top Navigation Bar */}
-      <div className="h-16 px-4 md:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-30 shadow-sm">
-        <div className="flex items-center gap-2 md:gap-4 flex-1">
-          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full shrink-0">
+      <header className="h-20 px-4 md:px-8 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-40 shadow-sm">
+        <div className="flex items-center gap-4 w-1/3">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <input 
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="font-serif font-bold text-base md:text-xl text-slate-900 bg-transparent outline-none focus:ring-0 w-full max-w-[180px] md:max-w-xs"
-            placeholder="Názov menu"
-          />
+          <div className="hidden lg:flex flex-col truncate">
+            <h2 className="font-serif font-bold text-slate-900 truncate">{menuData.name}</h2>
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest leading-none">Auto-save aktívny</span>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-           <Button 
-             variant="primary" 
-             size="sm"
-             onClick={() => onSave({ id: menuId || crypto.randomUUID(), name, items, theme, createdAt: Date.now() })}
-             className="md:h-10 rounded-xl"
-           >
-             <Save className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Uložiť</span>
+
+        <div className="flex bg-slate-100 p-1 rounded-2xl">
+          <button 
+            onClick={() => setActiveTab('editor')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Editor
+          </button>
+          <button 
+            onClick={() => setActiveTab('preview')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Náhľad
+          </button>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 w-1/3">
+           <Button variant="primary" size="sm" onClick={handleSaveClick} className="rounded-xl h-11 shadow-xl shadow-slate-900/10">
+             Uložiť Projekt
            </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 overflow-hidden flex flex-col md:flex-row relative">
-        {/* Editor Pane */}
-        <div className={`
-          flex-1 h-full overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-50 transition-all duration-300
-          ${activeTab === 'preview' ? 'hidden md:block md:w-1/3 opacity-50 grayscale-[0.5]' : 'block md:w-2/5 lg:w-1/3'}
-          border-r border-slate-200
-        `}>
-          
-          {/* Templates Section */}
-          <section className="space-y-4">
-             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Zap className="w-3 h-3 text-amber-500" /> Okamžité Šablóny
-             </label>
-             <div className="grid grid-cols-3 gap-3">
-                {QUICK_TEMPLATES.map(t => (
-                  <button 
-                    key={t.id}
-                    onClick={() => handleQuickTemplate(t.prompt)}
-                    className="p-4 bg-white border border-slate-200 rounded-[1.5rem] hover:border-indigo-500 hover:shadow-xl transition-all flex flex-col items-center gap-3 group active:scale-95"
-                  >
-                    <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                      <t.icon className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] md:text-xs font-bold text-slate-600 group-hover:text-indigo-900 text-center">{t.label}</span>
-                  </button>
+      <div className="flex-1 flex overflow-hidden">
+        <motion.div 
+          animate={{ x: activeTab === 'editor' ? 0 : '-100%', opacity: activeTab === 'editor' ? 1 : 0 }}
+          className="w-full lg:w-[450px] bg-white border-r border-slate-200 overflow-y-auto p-8 space-y-12 pb-32 scrollbar-hide"
+        >
+          <section className="space-y-6">
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Globálny Design</h3>
+            <div className="space-y-4">
+               <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Globe className="w-3 h-3" /> Aktívne Jazyky</label>
+                  <div className="flex gap-2">
+                     {AVAILABLE_LANGS.map(lang => (
+                       <button 
+                        key={lang} 
+                        onClick={() => {
+                          const nextLangs = menuData.activeLanguages.includes(lang)
+                            ? menuData.activeLanguages.filter(l => l !== lang)
+                            : [...menuData.activeLanguages, lang];
+                          if (nextLangs.length > 0) updateMenuData({ activeLanguages: nextLangs });
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all border ${menuData.activeLanguages.includes(lang) ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                       >
+                         {lang}
+                       </button>
+                     ))}
+                  </div>
+               </div>
+               <div className="space-y-3 pt-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Palette className="w-3 h-3" /> Vizuálny Akcent</label>
+                  <div className="flex gap-2 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                     {(Object.keys(accentColors) as AccentColor[]).map(c => (
+                       <button 
+                        key={c} 
+                        onClick={() => updateMenuData({ accentColor: c })}
+                        className={`flex-1 h-8 rounded-lg transition-all ${accentColors[c].bg} ${menuData.accentColor === c ? 'ring-2 ring-slate-900 ring-offset-2 scale-105' : 'opacity-40 hover:opacity-100'}`} 
+                       />
+                     ))}
+                  </div>
+               </div>
+            </div>
+          </section>
+
+          <section className="space-y-6">
+             <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Štruktúra Menu</h3>
+                <Button size="sm" variant="ghost" onClick={addItem} className="text-indigo-600"><Plus className="w-4 h-4 mr-2" /> Pridať</Button>
+             </div>
+             
+             <div className="bg-slate-950 rounded-3xl p-6 text-white space-y-4 shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-indigo-500/20 transition-all" />
+               <div className="relative z-10 space-y-4">
+                 <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 uppercase tracking-widest"><Sparkles className="w-3 h-3" /> AI Copilot</div>
+                 <h4 className="text-sm font-serif font-bold">Generovať koncept</h4>
+                 <textarea 
+                  value={uiState.prompt}
+                  onChange={e => updateUiState({ prompt: e.target.value })}
+                  placeholder="napr. Morské bistro v Marseille..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 h-20 resize-none"
+                 />
+                 <Button variant="gradient" size="sm" className="w-full h-10 rounded-xl" onClick={handleGenerate} isLoading={uiState.isGenerating}>Vytvoriť Menu</Button>
+               </div>
+             </div>
+
+             <div className="space-y-3">
+                {menuData.items.map(item => (
+                  <div key={item.id} className="group bg-slate-50 hover:bg-white border border-slate-100 hover:border-indigo-100 p-4 rounded-2xl flex items-center gap-4 transition-all hover:shadow-lg">
+                     <GripVertical className="w-4 h-4 text-slate-300" />
+                     <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-900 truncate">{item.label}</p>
+                        <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest">{item.price || 'Bez ceny'}</p>
+                     </div>
+                     <button onClick={() => updateUiState({ editingItemId: item.id })} className="p-2 bg-white text-slate-400 hover:text-indigo-600 rounded-xl shadow-sm"><Edit2 className="w-4 h-4" /></button>
+                  </div>
                 ))}
              </div>
           </section>
+        </motion.div>
 
-          {/* AI Box */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-2xl shadow-indigo-900/20">
-             <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12 pointer-events-none group-hover:scale-110 transition-transform duration-500">
-                <Sparkles className="w-32 h-32" />
-             </div>
-             <div className="relative z-10">
-               <div className="flex items-center gap-2 mb-3">
-                 <Sparkles className="w-4 h-4 text-indigo-400" />
-                 <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">AI Generátor</span>
-               </div>
-               <h3 className="text-2xl font-serif font-bold mb-6 leading-tight">Navrhnite menu pár slovami</h3>
-               <div className="flex flex-col gap-3">
-                 <input 
-                   value={prompt}
-                   onChange={(e) => setPrompt(e.target.value)}
-                   className="bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 backdrop-blur-md placeholder:text-white/30"
-                   placeholder="napr. Luxusný Steakhouse v New Yorku..."
-                   onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                 />
-                 <Button variant="gradient" onClick={() => handleGenerate()} isLoading={isGenerating} className="w-full h-14 text-base rounded-2xl">
-                   Vytvoriť Architektúru
-                 </Button>
-               </div>
-             </div>
-          </div>
-
-          {/* Items Structure */}
-          <section className="space-y-4 pb-32">
-             <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Layers className="w-4 h-4" /> Štruktúra
-                </label>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setItems([...items, { id: crypto.randomUUID(), label: 'Nová položka', url: '#', depth: 0 }])}>
-                    <Plus className="w-4 h-4 mr-1" /> Pridať
-                  </Button>
-                </div>
-             </div>
-             
-             <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-3">
-                <AnimatePresence mode="popLayout">
-                  {items.map((item) => {
-                    const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : null;
-                    const isPickerOpen = iconPickerOpen === item.id;
-                    return (
-                      <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
-                         <div className={`bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm transition-all relative ${isPickerOpen ? 'z-50 ring-2 ring-indigo-500' : 'hover:shadow-md'}`}>
-                            <GripVertical className="w-5 h-5 text-slate-300 cursor-grab active:cursor-grabbing" />
-                            <div className="relative">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setIconPickerOpen(isPickerOpen ? null : item.id); }}
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${item.icon ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                              >
-                                {Icon ? <Icon className="w-5 h-5" /> : <Smile className="w-5 h-5" />}
-                              </button>
-                              <IconPicker 
-                                isOpen={isPickerOpen} 
-                                onClose={() => setIconPickerOpen(null)} 
-                                onSelect={(icon) => updateItem(item.id, { icon })}
-                                selectedIcon={item.icon}
-                                placement="bottom"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                               <input 
-                                value={item.label}
-                                onChange={(e) => updateItem(item.id, { label: e.target.value })}
-                                className="w-full text-sm font-bold outline-none bg-transparent text-slate-900 truncate"
-                                placeholder="Položka menu"
-                              />
-                              <input 
-                                value={item.url}
-                                onChange={(e) => updateItem(item.id, { url: e.target.value })}
-                                className="w-full text-[10px] font-mono text-slate-400 outline-none bg-transparent truncate"
-                                placeholder="https://..."
-                              />
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                               <button onClick={() => updateItem(item.id, { depth: 0 })} className={`p-2 rounded-xl transition-all ${item.depth === 0 ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'text-slate-300 hover:text-slate-500'}`}><ChevronLeft className="w-4 h-4" /></button>
-                               <button onClick={() => updateItem(item.id, { depth: 1 })} className={`p-2 rounded-xl transition-all ${item.depth === 1 ? 'bg-indigo-100 text-indigo-600 shadow-inner' : 'text-slate-300 hover:text-slate-500'}`}><ChevronRight className="w-4 h-4" /></button>
-                            </div>
-                            <button onClick={() => setItems(items.filter(i => i.id !== item.id))} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
-                         </div>
-                      </Reorder.Item>
-                    );
-                  })}
-                </AnimatePresence>
-             </Reorder.Group>
-          </section>
-        </div>
-
-        {/* Preview Pane */}
-        <div className={`
-          flex-1 h-full bg-slate-100 transition-all duration-500 relative
-          ${activeTab === 'editor' ? 'hidden md:block md:w-2/3 lg:w-3/4' : 'block md:w-2/3 lg:w-3/4'}
-        `}>
-           {/* Theme Quick Switcher Overlay */}
-           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-white/80 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-2xl border border-white/50 flex gap-4">
-              {['glass', 'dark', 'light'].map((t) => (
-                <button 
-                  key={t}
-                  onClick={() => setTheme(t as MenuTheme)}
-                  className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${theme === t ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  {t}
-                </button>
-              ))}
+        <div className="flex-1 bg-slate-100/50 p-6 md:p-12 overflow-hidden flex flex-col items-center gap-8 relative">
+           <div className="bg-white/80 backdrop-blur-xl px-4 py-2 rounded-2xl shadow-2xl border border-white/50 flex gap-6 items-center z-20">
+              <div className="flex p-1 bg-slate-200/50 rounded-xl">
+                 <button onClick={() => updateUiState({ previewDevice: 'desktop' })} className={`p-2 rounded-lg transition-all ${uiState.previewDevice === 'desktop' ? 'bg-white shadow-sm' : 'text-slate-400'}`}><Monitor className="w-4 h-4" /></button>
+                 <button onClick={() => updateUiState({ previewDevice: 'mobile' })} className={`p-2 rounded-lg transition-all ${uiState.previewDevice === 'mobile' ? 'bg-white shadow-sm' : 'text-slate-400'}`}><Smartphone className="w-4 h-4" /></button>
+              </div>
+              <div className="flex gap-2">
+                 {['glass', 'dark', 'light'].map(t => (
+                   <button 
+                    key={t} 
+                    onClick={() => updateMenuData({ theme: t as MenuTheme })}
+                    className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${menuData.theme === t ? 'bg-slate-900 text-white' : 'text-slate-400 hover:bg-slate-200/50'}`}
+                   >
+                     {t}
+                   </button>
+                 ))}
+              </div>
            </div>
-           <div className="h-full w-full overflow-hidden">
-             <MenuPreview menu={{ id: 'preview', name, items, theme, createdAt: 0 }} />
-           </div>
-        </div>
 
-        {/* Mobile Tab Switcher - Floating Action Group */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex bg-slate-900/95 backdrop-blur-2xl p-2 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] md:hidden z-50 border border-white/10 pb-safe">
-           <button 
-             onClick={() => setActiveTab('editor')} 
-             className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-300 ${activeTab === 'editor' ? 'bg-white text-slate-900 shadow-xl scale-105' : 'text-slate-400'}`}
-           >
-             <Edit2 className="w-5 h-5" />
-             <span className="text-xs font-bold uppercase tracking-widest">Editor</span>
-           </button>
-           <button 
-             onClick={() => setActiveTab('preview')} 
-             className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-300 ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-xl scale-105' : 'text-slate-400'}`}
-           >
-             <Eye className="w-5 h-5" />
-             <span className="text-xs font-bold uppercase tracking-widest">Náhľad</span>
-           </button>
+           <div className={`transition-all duration-700 bg-white shadow-[0_50px_100px_rgba(0,0,0,0.15)] relative overflow-hidden ${uiState.previewDevice === 'mobile' ? 'w-[375px] h-[750px] rounded-[3.5rem] border-[10px] border-slate-950' : 'w-full h-full rounded-[3rem]'}`}>
+              <MenuPreview menu={{ ...menuData, id: 'preview', createdAt: 0 } as Menu} />
+           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {uiState.editingItemId && editingItem && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" />
+             <motion.div layoutId="item-modal" className="relative w-full max-w-4xl bg-white rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+                <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                   <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl ${currentAccent.bg} text-white flex items-center justify-center shadow-lg`}><Settings className="w-6 h-6" /></div>
+                      <div>
+                         <h2 className="text-3xl font-serif font-bold text-slate-900">Editor Položky</h2>
+                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Detailná konfigurácia kulinárskeho diela</p>
+                      </div>
+                   </div>
+                   <button onClick={() => updateUiState({ editingItemId: null })} className="p-3 hover:bg-white rounded-full transition-all border border-transparent hover:border-slate-200"><X className="w-6 h-6 text-slate-300" /></button>
+                </div>
+
+                <div className="p-10 overflow-y-auto space-y-12 scrollbar-hide">
+                   <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
+                      {menuData.activeLanguages.map(lang => (
+                        <button 
+                          key={lang}
+                          onClick={() => setEditingLang(lang)}
+                          className={`px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${editingLang === lang ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                   </div>
+
+                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                      <div className="space-y-8">
+                         <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Názov ({editingLang.toUpperCase()})</label>
+                            <input 
+                              value={editingItem.translations?.[editingLang]?.label || (editingLang === 'sk' ? editingItem.label : '')} 
+                              onChange={(e) => updateItemTranslation(editingItem.id, editingLang, 'label', e.target.value)} 
+                              className="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] px-6 py-5 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none" 
+                            />
+                         </div>
+                         <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cenová Hladina</label>
+                            <input value={editingItem.price || ''} onChange={(e) => updateItem(editingItem.id, { price: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] px-6 py-5 text-sm font-serif italic focus:bg-white transition-all outline-none" placeholder="napr. €24" />
+                         </div>
+                         <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Zobrazenie (Scheduling)</label>
+                            <div className="grid grid-cols-2 gap-2">
+                               {(['breakfast', 'lunch', 'dinner', 'all'] as MealTime[]).map(time => (
+                                 <button key={time} onClick={() => updateItem(editingItem.id, { schedule: time })} className={`px-4 py-3 rounded-2xl text-[10px] font-bold uppercase transition-all border ${editingItem.schedule === time ? 'bg-slate-900 text-white border-slate-900 shadow-xl' : 'bg-white text-slate-400 border-slate-100'}`}>
+                                   {time}
+                                 </button>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="space-y-8">
+                         <div className="space-y-4">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prémiové Atribúty</label>
+                            <div className="flex flex-col gap-3">
+                               <button 
+                                onClick={() => updateItem(editingItem.id, { isChefChoice: !editingItem.isChefChoice })}
+                                className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${editingItem.isChefChoice ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 text-slate-400 border-transparent'}`}
+                               >
+                                 <span className="text-xs font-bold uppercase tracking-widest">Chef's Choice</span>
+                                 <Star className={`w-5 h-5 ${editingItem.isChefChoice ? 'fill-amber-500 text-amber-500' : 'opacity-20'}`} />
+                               </button>
+                               <button 
+                                onClick={() => updateItem(editingItem.id, { isLimitedEdition: !editingItem.isLimitedEdition })}
+                                className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${editingItem.isLimitedEdition ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-slate-50 text-slate-400 border-transparent'}`}
+                               >
+                                 <span className="text-xs font-bold uppercase tracking-widest">Limitovaná edícia</span>
+                                 <Zap className={`w-5 h-5 ${editingItem.isLimitedEdition ? 'fill-rose-500 text-rose-500' : 'opacity-20'}`} />
+                               </button>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Popis ({editingLang.toUpperCase()})</label>
+                         <button 
+                          onClick={async () => {
+                            updateUiState({ isGeneratingDesc: true });
+                            const desc = await generateDishDescription(editingItem.translations?.[editingLang]?.label || editingItem.label);
+                            updateItemTranslation(editingItem.id, editingLang, 'description', desc);
+                            updateUiState({ isGeneratingDesc: false });
+                          }}
+                          className="flex items-center gap-2 text-indigo-600 text-[10px] font-bold uppercase tracking-widest hover:text-indigo-800"
+                         >
+                           <Sparkles className={`w-3 h-3 ${uiState.isGeneratingDesc ? 'animate-spin' : ''}`} /> {uiState.isGeneratingDesc ? 'Generujem...' : 'AI Preklad/Popis'}
+                         </button>
+                      </div>
+                      <textarea 
+                        value={editingItem.translations?.[editingLang]?.description || (editingLang === 'sk' ? editingItem.description : '')} 
+                        onChange={(e) => updateItemTranslation(editingItem.id, editingLang, 'description', e.target.value)} 
+                        className="w-full h-32 bg-slate-50 border border-slate-100 rounded-[1.5rem] p-6 text-sm italic font-light outline-none focus:bg-white transition-all resize-none scrollbar-hide" 
+                        placeholder="Popíšte symfóniu chutí..." 
+                      />
+                   </div>
+                </div>
+
+                <div className="p-10 bg-slate-900 text-white flex gap-4 shrink-0">
+                   <Button variant="primary" className="flex-1 h-16 rounded-2xl text-lg bg-indigo-600 hover:bg-indigo-500" onClick={() => updateUiState({ editingItemId: null })}>Uložiť Zmeny Položky</Button>
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

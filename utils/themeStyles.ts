@@ -22,4 +22,45 @@ export const themeStyles = {
   }
 };
 
-export type ThemeType = keyof typeof themeStyles;
+export const accentColors = {
+  indigo: {
+    bg: 'bg-indigo-600',
+    text: 'text-indigo-600',
+    border: 'border-indigo-600',
+    ring: 'ring-indigo-600',
+    light: 'bg-indigo-50',
+    hex: '#4f46e5'
+  },
+  gold: {
+    bg: 'bg-[#C5A059]',
+    text: 'text-[#C5A059]',
+    border: 'border-[#C5A059]',
+    ring: 'ring-[#C5A059]',
+    light: 'bg-[#fdf9f0]',
+    hex: '#C5A059'
+  },
+  rose: {
+    bg: 'bg-rose-600',
+    text: 'text-rose-600',
+    border: 'border-rose-600',
+    ring: 'ring-rose-600',
+    light: 'bg-rose-50',
+    hex: '#e11d48'
+  },
+  emerald: {
+    bg: 'bg-emerald-600',
+    text: 'text-emerald-600',
+    border: 'border-emerald-600',
+    ring: 'ring-emerald-600',
+    light: 'bg-emerald-50',
+    hex: '#10b981'
+  },
+  slate: {
+    bg: 'bg-slate-900',
+    text: 'text-slate-900',
+    border: 'border-slate-900',
+    ring: 'ring-slate-900',
+    light: 'bg-slate-50',
+    hex: '#0f172a'
+  }
+};
