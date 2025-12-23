@@ -5,21 +5,23 @@ export type AccentColor = 'indigo' | 'gold' | 'rose' | 'emerald' | 'slate';
 export type FontFamily = 'serif' | 'sans';
 export type MealTime = 'all' | 'breakfast' | 'lunch' | 'dinner';
 export type Language = 'sk' | 'en' | 'de';
+export type ItemType = 'dish' | 'section';
 
 export interface MenuItem {
   id: string;
+  type?: ItemType;
   label: string;
   description?: string;
   url: string;
   depth: number;
   icon?: string;
   price?: string;
+  image?: string; // Base64 or URL
   isChefChoice?: boolean;
   isLimitedEdition?: boolean;
   dietaryTags?: ('vegan' | 'vegetarian' | 'paleo' | 'keto' | 'gluten-free')[];
   allergens?: string[];
   schedule?: MealTime;
-  // Use Partial to allow providing translations for only some languages (e.g., just 'sk')
   translations?: Partial<Record<Language, { label: string; description?: string }>>;
 }
 
@@ -43,12 +45,6 @@ export interface AiGeneratedItem {
   description?: string;
   price?: string;
   url: string;
+  type?: ItemType;
   children?: AiGeneratedItem[];
-}
-
-export interface AnalyticsData {
-  views: number;
-  topItems: { id: string; clicks: number }[];
-  deviceBreakdown: { mobile: number; desktop: number };
-  lastUpdated: number;
 }

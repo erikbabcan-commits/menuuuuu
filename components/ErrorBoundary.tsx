@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -14,12 +15,14 @@ interface State {
  * Robustný Error Boundary s presným typovaním pre state a props.
  * Zachytáva neočakávané chyby pri renderovaní a poskytuje luxusný fallback.
  */
-// Fix: Explicitly import and extend Component to resolve issues with base class property detection
-export class ErrorBoundary extends Component<Props, State> {
-  // Fix: Removed 'override' modifier which was causing compilation errors when base class detection failed
-  public state: State = {
-    hasError: false
-  };
+// Fix: Use React.Component explicitly with generic Props and State to ensure 'props' and 'state' are correctly inherited and recognized by TypeScript.
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
@@ -31,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     /**
-     * Fix: Accessing state and props correctly from the base class.
+     * Fix: Accessing state and props correctly from the base class using destructuring from this.state and this.props.
      */
     const { hasError, error } = this.state;
     const { children } = this.props;
