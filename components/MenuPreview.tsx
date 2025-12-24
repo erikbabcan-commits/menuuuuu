@@ -1,10 +1,12 @@
+
 import React, { useState, useMemo } from 'react';
 import { Menu, MenuItem, Language } from '../types';
 import { 
-  Sparkles, Leaf, Wine, Info, Filter, X, ChevronRight, Utensils
+  Leaf, Wine, Filter, Utensils
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { themeStyles, accentColors } from '../utils/themeStyles';
+import { iconMap } from '../utils/icons';
 
 interface MenuPreviewProps {
   menu: Menu;
@@ -125,26 +127,34 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                 {group.section && (
                   <div className="text-center relative">
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 -z-10" />
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-[0.2em] uppercase italic bg-white inline-block px-8 py-2">
-                      {group.section.translations?.[currentLang]?.label || group.section.label}
-                    </h2>
+                    <div className="bg-white inline-flex items-center gap-4 px-8 py-2 relative">
+                        {group.section.icon && iconMap[group.section.icon] && React.createElement(iconMap[group.section.icon], { className: `w-5 h-5 ${currentAccent.text}` })}
+                        <h2 className="text-2xl font-bold text-slate-900 tracking-[0.2em] uppercase italic">
+                        {group.section.translations?.[currentLang]?.label || group.section.label}
+                        </h2>
+                    </div>
                   </div>
                 )}
                 
                 <div className="space-y-16">
-                   {group.items.map(item => (
+                   {group.items.map(item => {
+                     const ItemIcon = item.icon ? iconMap[item.icon] : null;
+                     return (
                      <motion.div key={item.id} layout className="group space-y-5">
                         <div className="flex gap-5 items-start">
                            {item.image && (
-                             <div className="w-24 h-24 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100">
+                             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100">
                                 <img src={item.image} className="w-full h-full object-cover" alt={item.label} />
                              </div>
                            )}
                            <div className="flex-1 space-y-2">
                               <div className="flex justify-between items-baseline gap-4 border-b border-slate-50 pb-2">
-                                 <h3 className="text-xl font-bold text-slate-900 leading-tight">
-                                   {item.translations?.[currentLang]?.label || item.label}
-                                 </h3>
+                                 <div className="flex items-center gap-3">
+                                    {ItemIcon && <ItemIcon className={`w-4 h-4 ${currentAccent.text} opacity-50`} />}
+                                    <h3 className="text-xl font-bold text-slate-900 leading-tight">
+                                    {item.translations?.[currentLang]?.label || item.label}
+                                    </h3>
+                                 </div>
                                  <span className={`text-xl italic font-serif ${currentAccent.text} shrink-0`}>{item.price}</span>
                               </div>
                               <p className="text-sm text-slate-500 italic leading-relaxed font-light opacity-80">
@@ -164,7 +174,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                         </div>
 
                         {item.pairing && (
-                          <div className="ml-4 md:ml-28 p-4 bg-indigo-50/40 rounded-[2rem] border border-indigo-100/50 flex items-center gap-4 group/wine">
+                          <div className="ml-4 md:ml-32 p-4 bg-indigo-50/40 rounded-[2rem] border border-indigo-100/50 flex items-center gap-4 group/wine">
                              <div className="p-3 bg-white rounded-2xl text-indigo-600 shadow-sm border border-indigo-100 group-hover/wine:scale-110 transition-transform"><Wine className="w-4 h-4" /></div>
                              <div className="space-y-0.5">
                                 <span className="block text-[8px] font-bold uppercase tracking-[0.3em] text-indigo-400 leading-none mb-1">Sommelier recommends</span>
@@ -173,7 +183,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                           </div>
                         )}
                      </motion.div>
-                   ))}
+                   )})}
                 </div>
              </motion.section>
            ))}

@@ -1,21 +1,22 @@
 
-import React, { useState, useCallback, useMemo, Suspense, lazy, useRef } from 'react';
+import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, GripVertical, Plus, Trash2, 
-  Sparkles, Save, Edit2, X, DollarSign,
+  Sparkles, Edit2, X, DollarSign,
   Monitor, Smartphone, Type as TypeIcon, Image as ImageIcon,
-  UtensilsCrossed, Tag, Wine, Leaf, RefreshCw, RotateCcw, RotateCw, FileDown, Languages, Utensils,
-  Settings
+  Wine, Leaf, RefreshCw, RotateCcw, RotateCw, FileDown, Languages, Utensils,
+  Settings, Search
 } from 'lucide-react';
-import { Menu, MenuItem, PlanTier, Language, FontFamily } from '../types';
+import { Menu, MenuItem, PlanTier, Language, FontFamily, AiGeneratedItem } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
-import { generateDishDescription, recommendWinePairing, translateMenuItem } from '../services/geminiService';
+import { generateDishDescription, recommendWinePairing, translateMenuItem, generateMenuStructure } from '../services/geminiService';
 import { accentColors } from '../utils/themeStyles';
 import { useHistory } from '../hooks/useHistory';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { iconMap } from '../utils/icons';
 
 const IconPicker = lazy(() => import('./IconPicker').then(module => ({ default: module.IconPicker })));
 
@@ -44,6 +45,8 @@ const AVAILABLE_LANGS: Language[] = ['sk', 'en', 'de'];
 
 export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initialData }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   
   const { 
     state: menuData, 
@@ -89,6 +92,29 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
       items: prev.items.map(item => item.id === id ? { ...item, ...updates } : item)
     }));
   }, [setMenuData]);
+
+  const handleMagicGenerate = async () => {
+    if (!uiState.prompt.trim()) return;
+    updateUiState({ isGenerating: true });
+    try {
+      const structure = await generateMenuStructure(uiState.prompt);
+      const newItems: MenuItem[] = structure.map((item: AiGeneratedItem) => ({
+        id: crypto.randomUUID(),
+        label: item.label,
+        description: item.description,
+        price: item.price,
+        url: item.url || '#',
+        type: (item as any).type || 'dish',
+        depth: 0,
+        translations: { sk: { label: item.label, description: item.description } }
+      }));
+      updateMenuData({ items: [...menuData.items, ...newItems] });
+      setShowAiPrompt(false);
+      updateUiState({ prompt: '' });
+    } finally {
+      updateUiState({ isGenerating: false });
+    }
+  };
 
   const handleAutoTranslate = async (item: MenuItem) => {
     updateUiState({ isTranslating: true });
@@ -139,6 +165,13 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     }
   };
 
+  const handleItemImageUpload = (id: string, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => updateItem(id, { image: reader.result as string });
+    reader.readAsDataURL(file);
+  };
+
+  // Fix: Adding the missing handleHeroUpload function for the banner image
   const handleHeroUpload = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => updateMenuData({ heroImageUrl: reader.result as string });
@@ -150,6 +183,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
   [menuData.items, uiState.editingItemId]);
 
   const currentAccent = accentColors[menuData.accentColor] || accentColors.slate;
+  const SelectedIcon = editingItem?.icon ? iconMap[editingItem.icon] : null;
 
   return (
     <div className="h-dvh w-full flex flex-col bg-[#edf2f7] overflow-hidden">
@@ -185,6 +219,27 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
           animate={{ x: activeTab === 'editor' ? 0 : '-100%', opacity: activeTab === 'editor' ? 1 : 0 }}
           className="w-full lg:w-[480px] bg-white border-r border-slate-300 overflow-y-auto p-6 md:p-8 space-y-12 pb-40 scrollbar-hide z-10"
         >
+          {/* AI Generation Input */}
+          <section className="bg-slate-950 rounded-[2.5rem] p-6 text-white space-y-4 shadow-xl shadow-slate-900/40 relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity"><Sparkles className="w-20 h-20" /></div>
+             <div className="flex items-center gap-3">
+               <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg"><Sparkles className="w-5 h-5" /></div>
+               <h3 className="text-sm font-bold uppercase tracking-widest">AI Architekt</h3>
+             </div>
+             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">Napíšte typ reštaurácie (napr. luxusný steakhouse) a mi navrhneme štruktúru.</p>
+             <div className="relative">
+                <input 
+                  value={uiState.prompt} 
+                  onChange={e => updateUiState({ prompt: e.target.value })}
+                  placeholder="Popíšte váš koncept..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 pr-12 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                />
+                <button onClick={handleMagicGenerate} disabled={uiState.isGenerating} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 transition-all disabled:opacity-50">
+                   {uiState.isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                </button>
+             </div>
+          </section>
+
           <section className="space-y-6">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Globálny Design</h3>
             
@@ -237,7 +292,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
 
           <section className="space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Stavebné bloky</h3>
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Položky Menu</h3>
               <div className="flex gap-2">
                  <button onClick={() => {
                    const id = crypto.randomUUID();
@@ -260,6 +315,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                        <span className={`text-sm font-semibold ${item.type === 'section' ? 'uppercase tracking-widest text-slate-900' : 'text-slate-700'}`}>{item.label}</span>
                     </div>
                     <button onClick={() => updateUiState({ editingItemId: item.id })} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><Edit2 className="w-4 h-4 text-slate-400" /></button>
+                    <button onClick={() => updateMenuData({ items: menuData.items.filter(i => i.id !== item.id) })} className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
                  </Reorder.Item>
                ))}
             </Reorder.Group>
@@ -272,7 +328,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
               <button onClick={() => updateUiState({ previewDevice: 'mobile' })} className={`p-2.5 rounded-xl transition-all ${uiState.previewDevice === 'mobile' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}><Smartphone className="w-5 h-5" /></button>
            </div>
            
-           <div className={`transition-all duration-700 bg-white shadow-brutal relative overflow-hidden border border-slate-300 ${uiState.previewDevice === 'mobile' ? 'w-full max-w-[390px] h-full max-h-[844px] rounded-[3.5rem] border-[12px] border-slate-950' : 'w-full h-full rounded-[2.5rem]'}`}>
+           <div className={`transition-all duration-700 bg-white shadow-brutal relative overflow-hidden border border-slate-300 ${uiState.previewDevice === 'mobile' ? 'w-full max-w-[390px] h-full max-h-[844px] rounded-[3.5rem] border-[12px] border-slate-950 shadow-2xl' : 'w-full h-full rounded-[2.5rem]'}`}>
               <div id="menu-capture-area" className="w-full h-full overflow-hidden">
                 <MenuPreview menu={{ ...menuData, id: 'preview', createdAt: 0 } as Menu} />
               </div>
@@ -286,11 +342,25 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
              <motion.div 
                layoutId="item-modal" 
-               className="relative w-full max-w-4xl bg-white rounded-t-[3rem] lg:rounded-[3.5rem] shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden border-t lg:border border-slate-200"
+               className="relative w-full max-w-5xl bg-white rounded-t-[3rem] lg:rounded-[3.5rem] shadow-2xl flex flex-col max-h-[95dvh] overflow-hidden border-t lg:border border-slate-200"
              >
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                    <div className="flex items-center gap-5">
-                      <div className={`w-14 h-14 rounded-2xl ${currentAccent.bg} text-white flex items-center justify-center shadow-lg border border-black/10`}><Settings className="w-7 h-7" /></div>
+                      <button 
+                        onClick={() => setIconPickerOpen(!iconPickerOpen)}
+                        className={`w-14 h-14 rounded-2xl ${currentAccent.bg} text-white flex items-center justify-center shadow-lg border border-black/10 relative overflow-visible hover:scale-105 transition-transform`}
+                      >
+                        {SelectedIcon ? <SelectedIcon className="w-7 h-7" /> : <Settings className="w-7 h-7" />}
+                        <Suspense fallback={null}>
+                          <IconPicker 
+                            isOpen={iconPickerOpen} 
+                            onClose={() => setIconPickerOpen(false)} 
+                            onSelect={icon => updateItem(editingItem.id, { icon })}
+                            selectedIcon={editingItem.icon}
+                            placement="bottom"
+                          />
+                        </Suspense>
+                      </button>
                       <div>
                         <h2 className="text-2xl font-bold font-serif text-slate-900">{editingItem.label}</h2>
                         <div className="flex gap-2 mt-2">
@@ -319,15 +389,23 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                               </button>
                             </div>
                          </div>
-                         {editingItem.type !== 'section' && (
+                         
+                         <div className="grid grid-cols-2 gap-6">
                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Cena / Podnadpis</label>
+                              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Cena</label>
                               <div className="relative">
                                 <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 <input value={editingItem.price || ''} onChange={e => updateItem(editingItem.id, { price: e.target.value })} className="w-full bg-slate-50 pl-12 p-5 rounded-2xl border border-slate-200 focus:bg-white outline-none italic font-serif text-xl shadow-inner" placeholder="0.00" />
                               </div>
                            </div>
-                         )}
+                           <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">URL / Link</label>
+                              <div className="relative">
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                <input value={editingItem.url || ''} onChange={e => updateItem(editingItem.id, { url: e.target.value })} className="w-full bg-slate-50 pl-12 p-5 rounded-2xl border border-slate-200 focus:bg-white outline-none text-sm font-medium shadow-inner" placeholder="#o-nas" />
+                              </div>
+                           </div>
+                         </div>
 
                          <div className="space-y-4">
                             <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Alergény (1-14)</label>
@@ -350,6 +428,26 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
 
                       <div className="space-y-8">
                          <div className="space-y-4">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Obrázok Položky</label>
+                            <div className="relative h-48 w-full rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center group/img">
+                               {editingItem.image ? (
+                                 <>
+                                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Item" />
+                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                      <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                      <button onClick={() => updateItem(editingItem.id, { image: undefined })} className="bg-rose-500 text-white p-2 rounded-xl shadow-xl hover:bg-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                   </div>
+                                 </>
+                               ) : (
+                                 <div className="flex flex-col items-center gap-3">
+                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm"><ImageIcon className="w-6 h-6 text-slate-300" /></div>
+                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer bg-white px-5 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all">Pridať Foto<input type="file" className="hidden" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                 </div>
+                               )}
+                            </div>
+                         </div>
+
+                         <div className="space-y-4">
                             <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Diétne štítky</label>
                             <div className="flex flex-wrap gap-2 bg-slate-50 p-5 rounded-3xl border border-slate-200 shadow-inner">
                                {DIETARY_OPTIONS.map(tag => (
@@ -366,39 +464,38 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                                ))}
                             </div>
                          </div>
-
-                         {editingItem.type !== 'section' && (
-                           <div className="space-y-4">
-                              <div className="flex items-center justify-between px-1">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-2 tracking-widest"><Wine className="w-3.5 h-3.5" /> AI Somelier</label>
-                                <button 
-                                  onClick={() => handleWinePairing(editingItem)} 
-                                  disabled={uiState.isGeneratingWine}
-                                  className="text-[9px] font-bold uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all shadow-sm"
-                                >
-                                  {uiState.isGeneratingWine ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Odporučiť víno'}
-                                </button>
-                              </div>
-                              <textarea 
-                                value={editingItem.pairing || ''} 
-                                onChange={e => updateItem(editingItem.id, { pairing: e.target.value })}
-                                className="w-full h-28 bg-indigo-50/30 border border-indigo-100 rounded-3xl p-5 italic text-sm text-indigo-900 outline-none focus:bg-white transition-all resize-none shadow-inner"
-                                placeholder="Párovanie k vínu a chuťové tóny..."
-                              />
-                           </div>
-                         )}
                       </div>
                    </div>
 
                    {editingItem.type !== 'section' && (
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Gastronomický Popis</label>
-                        <textarea 
-                          value={editingItem.description || ''} 
-                          onChange={e => updateItem(editingItem.id, { description: e.target.value })} 
-                          className="w-full h-40 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 focus:bg-white outline-none text-lg italic leading-relaxed shadow-inner" 
-                          placeholder="Popíšte ingrediencie, prípravu a emóciu jedla..."
-                        />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Gastronomický Popis</label>
+                          <textarea 
+                            value={editingItem.description || ''} 
+                            onChange={e => updateItem(editingItem.id, { description: e.target.value })} 
+                            className="w-full h-40 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 focus:bg-white outline-none text-lg italic leading-relaxed shadow-inner" 
+                            placeholder="Popíšte ingrediencie, prípravu a emóciu jedla..."
+                          />
+                       </div>
+                       <div className="space-y-4">
+                          <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-2 tracking-widest"><Wine className="w-3.5 h-3.5" /> AI Somelier</label>
+                            <button 
+                              onClick={() => handleWinePairing(editingItem)} 
+                              disabled={uiState.isGeneratingWine}
+                              className="text-[9px] font-bold uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all shadow-sm"
+                            >
+                              {uiState.isGeneratingWine ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Odporučiť víno'}
+                            </button>
+                          </div>
+                          <textarea 
+                            value={editingItem.pairing || ''} 
+                            onChange={e => updateItem(editingItem.id, { pairing: e.target.value })}
+                            className="w-full h-40 bg-indigo-50/30 border border-indigo-100 rounded-[2.5rem] p-8 italic text-lg text-indigo-900 outline-none focus:bg-white transition-all resize-none shadow-inner"
+                            placeholder="Párovanie k vínu a chuťové tóny..."
+                          />
+                       </div>
                     </div>
                    )}
                 </div>
