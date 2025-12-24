@@ -1,8 +1,7 @@
-
 export type MenuTheme = 'glass' | 'dark' | 'light';
 export type PlanTier = 'basic' | 'business' | 'corporate' | 'enterprise';
 export type AccentColor = 'indigo' | 'gold' | 'rose' | 'emerald' | 'slate';
-export type FontFamily = 'serif' | 'sans';
+export type FontFamily = 'serif' | 'sans' | 'montserrat' | 'playfair' | 'cormorant' | 'oswald';
 export type MealTime = 'all' | 'breakfast' | 'lunch' | 'dinner';
 export type Language = 'sk' | 'en' | 'de';
 export type ItemType = 'dish' | 'section';
@@ -16,13 +15,14 @@ export interface MenuItem {
   depth: number;
   icon?: string;
   price?: string;
-  image?: string; // Base64 or URL
+  image?: string; 
+  pairing?: string; // AI Sommelier recommendation
   isChefChoice?: boolean;
   isLimitedEdition?: boolean;
-  dietaryTags?: ('vegan' | 'vegetarian' | 'paleo' | 'keto' | 'gluten-free')[];
+  dietaryTags?: string[];
   allergens?: string[];
   schedule?: MealTime;
-  translations?: Partial<Record<Language, { label: string; description?: string }>>;
+  translations?: Partial<Record<Language, { label: string; description?: string; pairing?: string }>>;
 }
 
 export interface Menu {
@@ -31,6 +31,7 @@ export interface Menu {
   theme: MenuTheme;
   accentColor: AccentColor;
   fontFamily: FontFamily;
+  baseFontSize?: number; // v pixeloch, napr. 16
   borderRadius: 'none' | 'md' | 'full';
   heroImageUrl?: string;
   items: MenuItem[];
