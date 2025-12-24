@@ -1,5 +1,5 @@
-const CACHE_NAME = 'lmb-v1';
-// Use relative paths for assets to avoid origin mismatch issues
+
+const CACHE_NAME = 'lmb-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -12,27 +12,48 @@ self.addEventListener('install', (event) => {
   );
 });
 
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
-  // Only handle http/https requests
   if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Stale-while-revalidate strategy:
-      // Return cached response immediately if available, but fetch update in background
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Cache valid responses. 
-        // We include 'cors' type to allow caching of CDN assets (esm.sh, tailwindcss, fonts)
-        if (networkResponse && networkResponse.status === 200 && 
-           (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+        // Oprava: Validujeme odpoveď predtým než ju kešujeme.
+        // Zabránime ukladaniu poškodených alebo 0-byte súborov, ktoré vyvolávajú chybu PNG.
+        if (networkResponse && networkResponse.status === 200) {
+          const contentType = networkResponse.headers.get('content-type');
+          const contentLength = networkResponse.headers.get('content-length');
+          
+          // Ak je to obrázok, skontrolujeme či nie je prázdny
+          if (contentType && contentType.startsWith('image/') && contentLength === '0') {
+            return networkResponse;
+          }
+
+          if (networkResponse.type === 'basic' || networkResponse.type === 'cors') {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
         }
         return networkResponse;
       }).catch(() => {
-        // If offline and no cache, we just fail for now (or could return fallback)
+        // Fallback pre offline režim
+        return cachedResponse;
       });
 
       return cachedResponse || fetchPromise;

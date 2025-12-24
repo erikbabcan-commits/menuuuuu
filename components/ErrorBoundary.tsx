@@ -15,8 +15,8 @@ interface State {
  * Robustný Error Boundary s presným typovaním pre state a props.
  * Zachytáva neočakávané chyby pri renderovaní a poskytuje luxusný fallback.
  */
-// Fix: Use React.Component explicitly to ensure standard property availability in the class
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Extending Component directly from 'react' to resolve property typing issues where 'props' was not found on the instance.
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false
   };
@@ -32,7 +32,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
   public render() {
     const { hasError, error } = this.state;
 
-    // Fix: Avoiding destructuring this.props and accessing children directly to resolve TS property error
     if (hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -58,6 +57,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
+    // Accessing children directly from this.props now that inheritance is correctly typed.
     return this.props.children;
   }
 }

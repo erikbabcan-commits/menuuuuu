@@ -6,12 +6,12 @@ import {
   Sparkles, Edit2, X, DollarSign,
   Monitor, Smartphone, Type as TypeIcon, Image as ImageIcon,
   Wine, Leaf, RefreshCw, RotateCcw, RotateCw, FileDown, Languages, Utensils,
-  Settings, Search
+  Settings, Search, Camera
 } from 'lucide-react';
 import { Menu, MenuItem, PlanTier, Language, FontFamily, AiGeneratedItem } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
-import { generateDishDescription, recommendWinePairing, translateMenuItem, generateMenuStructure } from '../services/geminiService';
+import { generateDishDescription, recommendWinePairing, translateMenuItem, generateMenuStructure, generateDishImage } from '../services/geminiService';
 import { accentColors } from '../utils/themeStyles';
 import { useHistory } from '../hooks/useHistory';
 import html2canvas from 'html2canvas';
@@ -45,7 +45,6 @@ const AVAILABLE_LANGS: Language[] = ['sk', 'en', 'de'];
 
 export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initialData }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
-  const [showAiPrompt, setShowAiPrompt] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   
   const { 
@@ -72,6 +71,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     isGenerating: false,
     isGeneratingDesc: false,
     isGeneratingWine: false,
+    isGeneratingImage: false,
     isTranslating: false,
     isExporting: false,
     editingItemId: null as string | null,
@@ -109,10 +109,21 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
         translations: { sk: { label: item.label, description: item.description } }
       }));
       updateMenuData({ items: [...menuData.items, ...newItems] });
-      setShowAiPrompt(false);
       updateUiState({ prompt: '' });
     } finally {
       updateUiState({ isGenerating: false });
+    }
+  };
+
+  const handleAiPhotoGenerate = async (item: MenuItem) => {
+    updateUiState({ isGeneratingImage: true });
+    try {
+      const imageData = await generateDishImage(item.label, item.description || '');
+      if (imageData) {
+        updateItem(item.id, { image: imageData });
+      }
+    } finally {
+      updateUiState({ isGeneratingImage: false });
     }
   };
 
@@ -151,7 +162,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     try {
       const element = document.getElementById('menu-capture-area');
       if (!element) return;
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -166,13 +177,14 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
   };
 
   const handleItemImageUpload = (id: string, file: File) => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onloadend = () => updateItem(id, { image: reader.result as string });
     reader.readAsDataURL(file);
   };
 
-  // Fix: Adding the missing handleHeroUpload function for the banner image
   const handleHeroUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onloadend = () => updateMenuData({ heroImageUrl: reader.result as string });
     reader.readAsDataURL(file);
@@ -226,7 +238,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg"><Sparkles className="w-5 h-5" /></div>
                <h3 className="text-sm font-bold uppercase tracking-widest">AI Architekt</h3>
              </div>
-             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">Napíšte typ reštaurácie (napr. luxusný steakhouse) a mi navrhneme štruktúru.</p>
+             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">Napíšte typ reštaurácie (napr. luxusný steakhouse) a my navrhneme štruktúru.</p>
              <div className="relative">
                 <input 
                   value={uiState.prompt} 
@@ -274,15 +286,15 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                   <div className="relative group h-36 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 flex items-center justify-center transition-all hover:border-slate-300">
                      {menuData.heroImageUrl ? (
                        <>
-                        <img src={menuData.heroImageUrl} className="w-full h-full object-cover" alt="Hero" />
+                        <img src={menuData.heroImageUrl} className="w-full h-full object-cover" alt="Hero" onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=800")} />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <label className="bg-white text-slate-900 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" onChange={e => e.target.files && handleHeroUpload(e.target.files[0])}/></label>
+                          <label className="bg-white text-slate-900 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleHeroUpload(e.target.files[0])}/></label>
                         </div>
                        </>
                      ) : (
                        <div className="flex flex-col items-center gap-3 text-slate-400">
                           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-200"><ImageIcon className="w-5 h-5" /></div>
-                          <label className="text-[10px] font-bold uppercase cursor-pointer text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors">Nahrať Foto<input type="file" className="hidden" onChange={e => e.target.files && handleHeroUpload(e.target.files[0])}/></label>
+                          <label className="text-[10px] font-bold uppercase cursor-pointer text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors">Nahrať Foto<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleHeroUpload(e.target.files[0])}/></label>
                        </div>
                      )}
                   </div>
@@ -428,20 +440,36 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
 
                       <div className="space-y-8">
                          <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Obrázok Položky</label>
+                            <div className="flex items-center justify-between px-1">
+                                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Obrázok Položky</label>
+                                {editingItem.type !== 'section' && (
+                                  <button 
+                                    onClick={() => handleAiPhotoGenerate(editingItem)}
+                                    disabled={uiState.isGeneratingImage}
+                                    className="flex items-center gap-2 text-[9px] font-bold uppercase text-indigo-600 hover:text-indigo-800 transition-colors"
+                                  >
+                                    <Camera className={`w-3 h-3 ${uiState.isGeneratingImage ? 'animate-pulse' : ''}`} /> AI Foto Ateliér
+                                  </button>
+                                )}
+                            </div>
                             <div className="relative h-48 w-full rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center group/img">
-                               {editingItem.image ? (
+                               {uiState.isGeneratingImage ? (
+                                  <div className="flex flex-col items-center gap-3">
+                                     <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                                     <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-600">AI Generuje vizuál...</span>
+                                  </div>
+                               ) : editingItem.image ? (
                                  <>
-                                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Item" />
+                                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Item" onError={(e) => e.currentTarget.classList.add('opacity-10')} />
                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                      <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                      <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
                                       <button onClick={() => updateItem(editingItem.id, { image: undefined })} className="bg-rose-500 text-white p-2 rounded-xl shadow-xl hover:bg-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                    </div>
                                  </>
                                ) : (
                                  <div className="flex flex-col items-center gap-3">
                                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm"><ImageIcon className="w-6 h-6 text-slate-300" /></div>
-                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer bg-white px-5 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all">Pridať Foto<input type="file" className="hidden" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer bg-white px-5 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all">Pridať Foto<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
                                  </div>
                                )}
                             </div>

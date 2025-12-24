@@ -75,3 +75,25 @@ export const recommendWinePairing = async (dishName: string, description: string
     return response.text?.replace(/[".]/g, '') || "Someliér odporúča Chardonnay s tónmi citrusov.";
   } catch (e) { return "Odporúčame biele suché víno."; }
 };
+
+export const generateDishImage = async (label: string, description: string): Promise<string | undefined> => {
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') return undefined;
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: `High-end gourmet food photography of: ${label}. ${description}. Minimalist, elegant, restaurant lighting, 4k resolution, professional styling.` }]
+      }
+    });
+    
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+  } catch (e) {
+    console.error("Image generation failed", e);
+  }
+  return undefined;
+};
