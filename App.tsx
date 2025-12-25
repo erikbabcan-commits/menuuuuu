@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Builder } from './components/Builder';
@@ -11,6 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const STORAGE_KEY = 'lmb_menus';
 const PLAN_STORAGE_KEY = 'lmb_plan';
+
+// Fix: Cast motion.div to any to avoid TypeScript errors
+const MotionDiv = motion.div as any;
 
 const App: React.FC = () => {
   const [route, setRoute] = useState<'dashboard' | 'builder'>('dashboard');
@@ -125,7 +127,7 @@ const App: React.FC = () => {
       <div className="h-dvh w-full overflow-hidden bg-slate-50 relative">
         <AnimatePresence mode="wait">
           {route === 'builder' ? (
-            <motion.div
+            <MotionDiv
               key="builder"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -141,9 +143,9 @@ const App: React.FC = () => {
                 currentPlan={currentPlan}
                 onUpgrade={handleUpgrade}
               />
-            </motion.div>
+            </MotionDiv>
           ) : (
-            <motion.div
+            <MotionDiv
               key="dashboard"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -160,7 +162,7 @@ const App: React.FC = () => {
                 onUpgrade={handleUpgrade}
                 onRestoreDemo={handleRestoreDemo}
               />
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
 

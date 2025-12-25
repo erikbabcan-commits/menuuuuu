@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -6,12 +5,12 @@ import {
   Sparkles, Edit2, X, DollarSign,
   Monitor, Smartphone, Type as TypeIcon, Image as ImageIcon,
   Wine, Leaf, RefreshCw, RotateCcw, RotateCw, FileDown, Languages, Utensils,
-  Settings, Search, Camera
+  Settings, Search, Camera, Globe, ExternalLink, Palette
 } from 'lucide-react';
-import { Menu, MenuItem, PlanTier, Language, FontFamily, AiGeneratedItem } from '../types';
+import { Menu, MenuItem, PlanTier, Language, FontFamily, AiGeneratedItem, MenuTheme } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
-import { generateDishDescription, recommendWinePairing, translateMenuItem, generateMenuStructure, generateDishImage } from '../services/geminiService';
+import { recommendWinePairing, translateMenuItem, generateMenuStructure, generateDishImage, getGastronomyTrends } from '../services/geminiService';
 import { accentColors } from '../utils/themeStyles';
 import { useHistory } from '../hooks/useHistory';
 import html2canvas from 'html2canvas';
@@ -19,6 +18,9 @@ import { jsPDF } from 'jspdf';
 import { iconMap } from '../utils/icons';
 
 const IconPicker = lazy(() => import('./IconPicker').then(module => ({ default: module.IconPicker })));
+
+// Fix: Cast motion.div to any to avoid TypeScript errors
+const MotionDiv = motion.div as any;
 
 const DIETARY_OPTIONS = ['vegan', 'vegetarian', 'gluten-free', 'lactose-free', 'keto', 'paleo', 'bio'];
 const ALLERGENS = Array.from({ length: 14 }, (_, i) => (i + 1).toString());
@@ -68,14 +70,16 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
 
   const [uiState, setUiState] = useState({
     prompt: '',
+    trendPrompt: '',
     isGenerating: false,
-    isGeneratingDesc: false,
+    isGeneratingTrends: false,
     isGeneratingWine: false,
     isGeneratingImage: false,
     isTranslating: false,
     isExporting: false,
     editingItemId: null as string | null,
-    previewDevice: 'desktop' as 'desktop' | 'mobile'
+    previewDevice: 'desktop' as 'desktop' | 'mobile',
+    trends: null as { text: string; sources: { title: string; uri: string }[] } | null
   });
 
   const updateMenuData = useCallback((updates: Partial<typeof menuData>) => {
@@ -98,13 +102,13 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     updateUiState({ isGenerating: true });
     try {
       const structure = await generateMenuStructure(uiState.prompt);
-      const newItems: MenuItem[] = structure.map((item: AiGeneratedItem) => ({
+      const newItems: MenuItem[] = structure.map((item: any) => ({
         id: crypto.randomUUID(),
         label: item.label,
         description: item.description,
         price: item.price,
         url: item.url || '#',
-        type: (item as any).type || 'dish',
+        type: item.type || 'dish',
         depth: 0,
         translations: { sk: { label: item.label, description: item.description } }
       }));
@@ -112,6 +116,17 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
       updateUiState({ prompt: '' });
     } finally {
       updateUiState({ isGenerating: false });
+    }
+  };
+
+  const handleSearchTrends = async () => {
+    if (!uiState.trendPrompt.trim()) return;
+    updateUiState({ isGeneratingTrends: true });
+    try {
+      const trends = await getGastronomyTrends(uiState.trendPrompt);
+      updateUiState({ trends });
+    } finally {
+      updateUiState({ isGeneratingTrends: false });
     }
   };
 
@@ -162,15 +177,30 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     try {
       const element = document.getElementById('menu-capture-area');
       if (!element) return;
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      // Fix pre corrupt PNG:html2canvas potrebuje povolené CORS a vypnuté proxy
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true, 
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+      });
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${menuData.name.toLowerCase().replace(/\s+/g, '-')}-menu.pdf`);
     } catch (e) {
-      console.error(e);
+      console.error("Export failed", e);
     } finally {
       updateUiState({ isExporting: false });
     }
@@ -220,30 +250,65 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
 
         <div className="hidden sm:flex items-center justify-end gap-3 w-1/3">
            <Button variant="secondary" size="md" onClick={handleExportPdf} isLoading={uiState.isExporting} className="rounded-xl border-slate-300 font-bold h-12">
-             <FileDown className="w-4 h-4 mr-2" /> PDF
+             <FileDown className="w-4 h-4 mr-2" /> PDF Export
            </Button>
            <Button variant="primary" size="md" onClick={() => onSave({ ...menuData, id: menuId || crypto.randomUUID(), createdAt: Date.now() } as Menu)} className="rounded-xl bg-slate-950 text-white font-bold h-12 shadow-lg shadow-slate-900/20">Uložiť</Button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        <motion.div 
+        <MotionDiv 
           animate={{ x: activeTab === 'editor' ? 0 : '-100%', opacity: activeTab === 'editor' ? 1 : 0 }}
           className="w-full lg:w-[480px] bg-white border-r border-slate-300 overflow-y-auto p-6 md:p-8 space-y-12 pb-40 scrollbar-hide z-10"
         >
+          {/* AI Trends Module */}
+          <section className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm space-y-4">
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center"><Globe className="w-4 h-4" /></div>
+               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Trendy z webu (AI Search)</h3>
+             </div>
+             <div className="flex gap-2">
+                <input 
+                  value={uiState.trendPrompt} 
+                  onChange={e => updateUiState({ trendPrompt: e.target.value })}
+                  placeholder="Hľadať trendy (napr. dezerty 2024)"
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+                <button 
+                  onClick={handleSearchTrends} 
+                  disabled={uiState.isGeneratingTrends}
+                  className="p-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  {uiState.isGeneratingTrends ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                </button>
+             </div>
+             {uiState.trends && (
+               <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-[11px] leading-relaxed text-slate-600">
+                  <p className="mb-3 font-medium">{uiState.trends.text}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {uiState.trends.sources.map((s, i) => (
+                      <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 rounded-lg hover:border-slate-400 transition-all text-indigo-600">
+                        <ExternalLink className="w-2.5 h-2.5" /> Zdroj {i+1}
+                      </a>
+                    ))}
+                  </div>
+               </div>
+             )}
+          </section>
+
           {/* AI Generation Input */}
           <section className="bg-slate-950 rounded-[2.5rem] p-6 text-white space-y-4 shadow-xl shadow-slate-900/40 relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity"><Sparkles className="w-20 h-20" /></div>
              <div className="flex items-center gap-3">
                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg"><Sparkles className="w-5 h-5" /></div>
-               <h3 className="text-sm font-bold uppercase tracking-widest">AI Architekt</h3>
+               <h3 className="text-sm font-bold uppercase tracking-widest">AI Architekt Menu</h3>
              </div>
-             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">Napíšte typ reštaurácie (napr. luxusný steakhouse) a my navrhneme štruktúru.</p>
+             <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">Napíšte koncept (napr. ázijský fusion) a my vygenerujeme štruktúru.</p>
              <div className="relative">
                 <input 
                   value={uiState.prompt} 
                   onChange={e => updateUiState({ prompt: e.target.value })}
-                  placeholder="Popíšte váš koncept..."
+                  placeholder="Popíšte vašu reštauráciu..."
                   className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 pr-12 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                 />
                 <button onClick={handleMagicGenerate} disabled={uiState.isGenerating} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 transition-all disabled:opacity-50">
@@ -256,6 +321,23 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Globálny Design</h3>
             
             <div className="space-y-8">
+               <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <Palette className="w-3 h-3" /> Motív Menu
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['glass', 'light', 'dark', 'neon'].map(t => (
+                      <button 
+                        key={t}
+                        onClick={() => updateMenuData({ theme: t as MenuTheme })}
+                        className={`h-10 rounded-xl border transition-all ${menuData.theme === t ? 'ring-2 ring-indigo-500 border-transparent scale-105' : 'border-slate-200 hover:border-slate-300'}`}
+                        style={{ background: t === 'dark' ? '#0f172a' : t === 'neon' ? '#000' : t === 'glass' ? '#f8fafc' : '#fff' }}
+                        title={t.charAt(0).toUpperCase() + t.slice(1)}
+                      />
+                    ))}
+                  </div>
+               </div>
+
                <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><TypeIcon className="w-3 h-3" /> Písmo & Veľkosť</label>
@@ -282,11 +364,17 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                </div>
 
                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Hero Pozadie</label>
+                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Hlavné Pozadie (Hero)</label>
                   <div className="relative group h-36 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 flex items-center justify-center transition-all hover:border-slate-300">
                      {menuData.heroImageUrl ? (
                        <>
-                        <img src={menuData.heroImageUrl} className="w-full h-full object-cover" alt="Hero" onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=800")} />
+                        <img 
+                          src={menuData.heroImageUrl} 
+                          className="w-full h-full object-cover" 
+                          alt="Hero" 
+                          crossOrigin="anonymous"
+                          onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=800")} 
+                        />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <label className="bg-white text-slate-900 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleHeroUpload(e.target.files[0])}/></label>
                         </div>
@@ -332,7 +420,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                ))}
             </Reorder.Group>
           </section>
-        </motion.div>
+        </MotionDiv>
 
         <div className="flex-1 bg-slate-200/40 p-4 lg:p-12 overflow-hidden flex flex-col items-center justify-center relative">
            <div className="absolute top-6 flex gap-4 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-xl z-20">
@@ -351,8 +439,8 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
       <AnimatePresence>
         {uiState.editingItemId && editingItem && (
           <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center lg:p-10">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
-             <motion.div 
+             <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
+             <MotionDiv 
                layoutId="item-modal" 
                className="relative w-full max-w-5xl bg-white rounded-t-[3rem] lg:rounded-[3.5rem] shadow-2xl flex flex-col max-h-[95dvh] overflow-hidden border-t lg:border border-slate-200"
              >
@@ -456,28 +544,33 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                                {uiState.isGeneratingImage ? (
                                   <div className="flex flex-col items-center gap-3">
                                      <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-                                     <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-600">AI Generuje vizuál...</span>
+                                     <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-600">Generuje sa vizuál...</span>
                                   </div>
                                ) : editingItem.image ? (
                                  <>
-                                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Item" onError={(e) => e.currentTarget.classList.add('opacity-10')} />
+                                   <img 
+                                      src={editingItem.image} 
+                                      className="w-full h-full object-cover" 
+                                      alt="Item" 
+                                      crossOrigin="anonymous"
+                                      onError={(e) => (e.currentTarget.style.display = 'none')} 
+                                    />
                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-4">
                                       <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
                                       <button onClick={() => updateItem(editingItem.id, { image: undefined })} className="bg-rose-500 text-white p-2 rounded-xl shadow-xl hover:bg-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                    </div>
                                  </>
                                ) : (
-                                 <div className="flex flex-col items-center gap-3">
-                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm"><ImageIcon className="w-6 h-6 text-slate-300" /></div>
-                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer bg-white px-5 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all">Pridať Foto<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                 <div className="flex flex-col items-center gap-3 text-slate-300">
+                                    <ImageIcon className="w-8 h-8" />
+                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer hover:underline"><input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/>Pridať fotografiu</label>
                                  </div>
                                )}
                             </div>
                          </div>
-
                          <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Diétne štítky</label>
-                            <div className="flex flex-wrap gap-2 bg-slate-50 p-5 rounded-3xl border border-slate-200 shadow-inner">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Diétne preferencie</label>
+                            <div className="flex flex-wrap gap-2 bg-slate-50 p-4 rounded-3xl border border-slate-200 shadow-inner">
                                {DIETARY_OPTIONS.map(tag => (
                                  <button 
                                   key={tag} 
@@ -485,7 +578,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                                     const next = (editingItem.dietaryTags || []).includes(tag) ? (editingItem.dietaryTags || []).filter(t => t !== tag) : [...(editingItem.dietaryTags || []), tag];
                                     updateItem(editingItem.id, { dietaryTags: next });
                                   }}
-                                  className={`px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase border transition-all ${editingItem.dietaryTags?.includes(tag) ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
+                                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all ${editingItem.dietaryTags?.includes(tag) ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
                                  >
                                    {tag}
                                  </button>
@@ -503,7 +596,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                             value={editingItem.description || ''} 
                             onChange={e => updateItem(editingItem.id, { description: e.target.value })} 
                             className="w-full h-40 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 focus:bg-white outline-none text-lg italic leading-relaxed shadow-inner" 
-                            placeholder="Popíšte ingrediencie, prípravu a emóciu jedla..."
+                            placeholder="Popíšte emóciu a zloženie..."
                           />
                        </div>
                        <div className="space-y-4">
@@ -514,14 +607,14 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                               disabled={uiState.isGeneratingWine}
                               className="text-[9px] font-bold uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all shadow-sm"
                             >
-                              {uiState.isGeneratingWine ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Odporučiť víno'}
+                              {uiState.isGeneratingWine ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Odporučiť párovanie'}
                             </button>
                           </div>
                           <textarea 
                             value={editingItem.pairing || ''} 
                             onChange={e => updateItem(editingItem.id, { pairing: e.target.value })}
                             className="w-full h-40 bg-indigo-50/30 border border-indigo-100 rounded-[2.5rem] p-8 italic text-lg text-indigo-900 outline-none focus:bg-white transition-all resize-none shadow-inner"
-                            placeholder="Párovanie k vínu a chuťové tóny..."
+                            placeholder="Víno, ktoré doplní zážitok..."
                           />
                        </div>
                     </div>
@@ -529,9 +622,9 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
                 </div>
 
                 <div className="p-8 bg-slate-950 border-t border-slate-800 flex gap-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
-                   <Button variant="primary" className="flex-1 rounded-[2rem] bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-20 text-xl border border-indigo-400/20" onClick={() => updateUiState({ editingItemId: null })}>Uložiť & Synchronizovať</Button>
+                   <Button variant="primary" className="flex-1 rounded-[2rem] bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-20 text-xl border border-indigo-400/20" onClick={() => updateUiState({ editingItemId: null })}>Uložiť zmeny</Button>
                 </div>
-             </motion.div>
+             </MotionDiv>
           </div>
         )}
       </AnimatePresence>

@@ -1,4 +1,5 @@
-export type MenuTheme = 'glass' | 'dark' | 'light';
+
+export type MenuTheme = 'glass' | 'dark' | 'light' | 'neon';
 export type PlanTier = 'basic' | 'business' | 'corporate' | 'enterprise';
 export type AccentColor = 'indigo' | 'gold' | 'rose' | 'emerald' | 'slate';
 export type FontFamily = 'serif' | 'sans' | 'montserrat' | 'playfair' | 'cormorant' | 'oswald';

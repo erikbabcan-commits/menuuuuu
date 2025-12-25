@@ -1,9 +1,8 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Plus, Activity, QrCode, Trash2, Smartphone, X, Zap, ArrowUpRight, Layout, Download, FileText, Utensils
 } from 'lucide-react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, PlanTier } from '../types';
 import { Button } from './ui/Button';
 import { accentColors } from '../utils/themeStyles';
@@ -20,7 +19,11 @@ interface DashboardProps {
   onRestoreDemo?: () => void;
 }
 
-const itemVariants: Variants = {
+// Fix: Cast motion components to any to avoid TypeScript errors
+const MotionDiv = motion.div as any;
+const MotionButton = motion.button as any;
+
+const itemVariants = {
   hidden: { opacity: 0, y: 30, scale: 0.98 },
   show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 80, damping: 15 } }
 };
@@ -64,7 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="h-full bg-[#edf2f7] font-sans overflow-y-auto pt-safe pb-32 scrollbar-hide">
       
       {/* Header */}
-      <motion.div 
+      <MotionDiv 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="sticky top-0 z-40 px-6 py-5"
@@ -90,11 +93,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
              </Button>
           </div>
         </div>
-      </motion.div>
+      </MotionDiv>
 
       <div className="max-w-7xl mx-auto px-6 md:px-10 pt-6 space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <motion.div 
+          <MotionDiv 
             variants={itemVariants}
             initial="hidden" animate="show"
             className="lg:col-span-2 bg-white rounded-[3.5rem] p-10 border border-slate-300 shadow-brutal min-h-[340px] flex flex-col justify-between"
@@ -111,14 +114,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
              </div>
              <div className="h-32 w-full flex items-end gap-2.5 pt-8">
                 {VISIT_DATA.map((v, i) => (
-                  <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${(v / MAX_VISIT) * 100}%` }} className="flex-1 bg-slate-200 rounded-t-2xl relative">
+                  <MotionDiv key={i} initial={{ height: 0 }} animate={{ height: `${(v / MAX_VISIT) * 100}%` }} className="flex-1 bg-slate-200 rounded-t-2xl relative">
                     <div className="absolute inset-0 bg-indigo-600 opacity-0 hover:opacity-100 transition-opacity rounded-t-2xl" />
-                  </motion.div>
+                  </MotionDiv>
                 ))}
              </div>
-          </motion.div>
+          </MotionDiv>
 
-          <motion.div variants={itemVariants} initial="hidden" animate="show" className="bg-white rounded-[3.5rem] p-10 border border-slate-300 shadow-brutal flex flex-col justify-between">
+          <MotionDiv variants={itemVariants} initial="hidden" animate="show" className="bg-white rounded-[3.5rem] p-10 border border-slate-300 shadow-brutal flex flex-col justify-between">
              <div className="flex items-center gap-4"><Smartphone className="w-5 h-5 text-amber-500" /><h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.25em]">Mobile UX</h4></div>
              <div className="space-y-8 py-4">
                 <div className="space-y-3">
@@ -126,15 +129,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                    <div className="h-3 w-full bg-slate-100 rounded-full p-1"><div className="h-full w-[82%] bg-indigo-600 rounded-full" /></div>
                 </div>
              </div>
-          </motion.div>
+          </MotionDiv>
 
-          <motion.div variants={itemVariants} initial="hidden" animate="show" className="bg-slate-950 rounded-[3.5rem] p-1 border border-slate-800 shadow-brutal group overflow-hidden">
+          <MotionDiv variants={itemVariants} initial="hidden" animate="show" className="bg-slate-950 rounded-[3.5rem] p-1 border border-slate-800 shadow-brutal group overflow-hidden">
              <div className="h-full w-full bg-gradient-to-br from-slate-900 to-black rounded-[3.3rem] p-10 flex flex-col justify-between relative">
                 <div className="absolute -right-4 -top-4 opacity-20"><Zap className="w-40 h-40 text-indigo-500" /></div>
                 <p className="text-[11px] text-white/50 leading-relaxed uppercase tracking-widest relative z-10">Premium Boost</p>
                 <Button variant="secondary" size="md" className="w-full rounded-2xl h-14 text-slate-950 font-bold bg-white" onClick={onUpgrade}>Upgrade Plan <ArrowUpRight className="w-5 h-5 ml-2" /></Button>
              </div>
-          </motion.div>
+          </MotionDiv>
         </div>
 
         <div className="space-y-12">
@@ -144,7 +147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pb-20">
               {menus.map(menu => (
-                <motion.div key={menu.id} variants={itemVariants} initial="hidden" animate="show" className="bg-white rounded-[4rem] p-6 border border-slate-300 shadow-brutal flex flex-col md:flex-row gap-8 relative group">
+                <MotionDiv key={menu.id} variants={itemVariants} initial="hidden" animate="show" className="bg-white rounded-[4rem] p-6 border border-slate-300 shadow-brutal flex flex-col md:flex-row gap-8 relative group">
                    <div className="w-full md:w-56 h-56 rounded-[3.5rem] bg-slate-100 relative overflow-hidden border border-slate-200 shrink-0">
                       {menu.heroImageUrl ? <img src={menu.heroImageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /> : <div className="w-full h-full flex items-center justify-center"><Layout className="w-12 h-12 text-slate-300" /></div>}
                       <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -169,13 +172,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          <button onClick={() => onDelete(menu.id)} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl border border-transparent hover:border-rose-100 transition-all"><Trash2 className="w-6 h-6" /></button>
                       </div>
                    </div>
-                </motion.div>
+                </MotionDiv>
               ))}
 
-              <motion.button onClick={onCreate} variants={itemVariants} className="bg-white rounded-[4rem] p-12 flex flex-col items-center justify-center gap-8 border-2 border-dashed border-slate-300 hover:border-indigo-600 hover:bg-indigo-50/20 transition-all shadow-brutal min-h-[250px]">
+              <MotionButton onClick={onCreate} variants={itemVariants} className="bg-white rounded-[4rem] p-12 flex flex-col items-center justify-center gap-8 border-2 border-dashed border-slate-300 hover:border-indigo-600 hover:bg-indigo-50/20 transition-all shadow-brutal min-h-[250px]">
                 <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-brutal border border-slate-200"><Plus className="w-10 h-10 text-slate-950" /></div>
                 <div className="text-center space-y-2"><p className="font-serif text-2xl font-bold">Vytvoriť Ponuku</p><p className="text-[9px] uppercase tracking-widest font-bold text-slate-400">Creative Studio AI</p></div>
-              </motion.button>
+              </MotionButton>
            </div>
         </div>
       </div>
@@ -183,8 +186,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <AnimatePresence>
          {activeMenuForQr && (
            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveMenuForQr(null)} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" />
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white rounded-[3.5rem] p-8 max-w-sm w-full text-center space-y-8 shadow-2xl border border-slate-200 flex flex-col items-center overflow-hidden">
+              <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveMenuForQr(null)} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" />
+              <MotionDiv initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white rounded-[3.5rem] p-8 max-w-sm w-full text-center space-y-8 shadow-2xl border border-slate-200 flex flex-col items-center overflow-hidden">
                  <button onClick={() => setActiveMenuForQr(null)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors z-20"><X className="w-5 h-5 text-slate-500" /></button>
                  
                  {/* Luxury Printable Card */}
@@ -230,7 +233,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <FileText className="w-3 h-3" /> PNG • 300 DPI • High Quality
                     </p>
                  </div>
-              </motion.div>
+              </MotionDiv>
            </div>
          )}
       </AnimatePresence>

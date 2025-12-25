@@ -12,6 +12,9 @@ interface ButtonProps extends HTMLMotionProps<"button"> {
   title?: string;
 }
 
+// Fix: Cast motion.button to any to avoid TypeScript errors with missing props in this environment
+const MotionButton = motion.button as any;
+
 export const Button: React.FC<ButtonProps> = ({ 
   children, 
   variant = 'primary', 
@@ -39,7 +42,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <motion.button 
+    <MotionButton 
       whileHover={{ scale: 1.02, y: -1 }}
       whileTap={{ scale: 0.96, y: 0 }}
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
@@ -53,6 +56,6 @@ export const Button: React.FC<ButtonProps> = ({
         </svg>
       ) : null}
       <span className="relative z-10 flex items-center gap-2">{children}</span>
-    </motion.button>
+    </MotionButton>
   );
 };

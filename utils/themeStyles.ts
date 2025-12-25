@@ -1,10 +1,11 @@
+
 export const themeStyles = {
   glass: {
     background: "bg-slate-50",
     nav: "bg-white/60 backdrop-blur-md border-b border-white/40 text-slate-900 shadow-sm supports-[backdrop-filter]:bg-white/40",
     dropdown: "bg-white/80 backdrop-blur-xl border border-white/50 text-slate-900 shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
     mobileMenu: "bg-white/95 backdrop-blur-2xl text-slate-900",
-    heroText: "text-slate-800"
+    heroText: "text-white"
   },
   dark: {
     background: "bg-slate-950",
@@ -19,6 +20,13 @@ export const themeStyles = {
     dropdown: "bg-white border border-slate-100 text-slate-900 shadow-xl shadow-slate-200/50",
     mobileMenu: "bg-white text-slate-900",
     heroText: "text-slate-900"
+  },
+  neon: {
+    background: "bg-black",
+    nav: "bg-black/80 backdrop-blur-xl border-b border-fuchsia-500/50 text-fuchsia-50 shadow-[0_0_15px_rgba(217,70,239,0.3)]",
+    dropdown: "bg-slate-900/90 border border-cyan-500/30 text-cyan-50 shadow-[0_0_20px_rgba(6,182,212,0.2)]",
+    mobileMenu: "bg-black/95 text-fuchsia-50",
+    heroText: "text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400 drop-shadow-[0_0_10px_rgba(217,70,239,0.5)]"
   }
 };
 

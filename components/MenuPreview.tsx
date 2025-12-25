@@ -1,21 +1,42 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Menu, MenuItem, Language } from '../types';
 import { 
-  Leaf, Wine, Filter, Utensils
+  Leaf, Wine, Filter, Utensils, Volume2, StopCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { themeStyles, accentColors } from '../utils/themeStyles';
 import { iconMap } from '../utils/icons';
+import { generateMenuAudio } from '../services/geminiService';
 
 interface MenuPreviewProps {
   menu: Menu;
+}
+
+// Fix: Cast motion components to any to avoid TypeScript errors
+const MotionDiv = motion.div as any;
+const MotionSection = motion.section as any;
+
+// Helper audio decoding functions
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
 }
 
 export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
   const [currentLang, setCurrentLang] = useState<Language>('sk');
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Audio State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   const dietaryTags = useMemo(() => {
     const tags = new Set<string>();
@@ -62,13 +83,67 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
 
   const baseFontSize = menu.baseFontSize || 16;
 
+  const handleStopAudio = () => {
+    if (sourceNodeRef.current) {
+      sourceNodeRef.current.stop();
+      sourceNodeRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  const handlePlayAudio = async () => {
+    if (isPlaying) {
+      handleStopAudio();
+      return;
+    }
+
+    setIsLoadingAudio(true);
+    try {
+      // Build text for TTS
+      let textToRead = `Menu: ${menu.name}. `;
+      const limitedGroups = groupedMenu.slice(0, 3); // Read only first 3 sections to keep it concise
+      
+      limitedGroups.forEach(group => {
+         if (group.section) {
+           textToRead += `${group.section.label}. `;
+         }
+         // Read max 3 items per section
+         group.items.slice(0, 3).forEach(item => {
+            textToRead += `${item.label}. ${item.description ? item.description.substring(0, 60) : ''}. `;
+         });
+      });
+
+      const base64Audio = await generateMenuAudio(textToRead);
+      
+      if (base64Audio) {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current!;
+        
+        const audioBuffer = await ctx.decodeAudioData(decode(base64Audio).buffer);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.onended = () => setIsPlaying(false);
+        source.start();
+        sourceNodeRef.current = source;
+        setIsPlaying(true);
+      }
+    } catch (e) {
+      console.error("Playback failed", e);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
+
   return (
     <div className={`w-full h-full relative overflow-x-hidden flex flex-col ${currentTheme.background} ${getFontFamily()} scrollbar-hide`} style={{ fontSize: `${baseFontSize}px` }}>
       {/* Dynamic Header */}
       <div className="relative h-64 shrink-0 overflow-hidden">
         <div className="absolute inset-0">
           {menu.heroImageUrl ? (
-            <img src={menu.heroImageUrl} className="w-full h-full object-cover" alt="Hero" />
+            <img src={menu.heroImageUrl} className="w-full h-full object-cover" alt="Hero" crossOrigin="anonymous" />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${currentAccent.bg}`} />
           )}
@@ -76,7 +151,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         </div>
         
         <div className="absolute bottom-8 left-6 right-6">
-           <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg leading-tight">{menu.name}</h1>
+           <h1 className={`text-3xl font-bold tracking-tight drop-shadow-lg leading-tight ${currentTheme.heroText || 'text-white'}`}>{menu.name}</h1>
            <div className="flex gap-2 mt-4">
               {menu.activeLanguages.map(l => (
                 <button key={l} onClick={() => setCurrentLang(l)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest border transition-all ${currentLang === l ? 'bg-white text-black border-white' : 'text-white/50 border-white/20 hover:border-white/40'}`}>{l}</button>
@@ -84,18 +159,28 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
            </div>
         </div>
 
-        <button 
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 shadow-xl"
-        >
-          {activeFilter ? <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full absolute top-0 right-0 border-2 border-slate-900" /> : null}
-          <Filter className="w-4 h-4" />
-        </button>
+        <div className="absolute top-6 right-6 flex gap-3">
+          <button 
+            onClick={handlePlayAudio}
+            disabled={isLoadingAudio}
+            className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center border shadow-xl transition-all ${isPlaying ? 'bg-indigo-500 text-white border-indigo-400' : 'bg-white/20 text-white border-white/20'}`}
+          >
+            {isLoadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isPlaying ? <StopCircle className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          
+          <button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 shadow-xl"
+          >
+            {activeFilter ? <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full absolute top-0 right-0 border-2 border-slate-900" /> : null}
+            <Filter className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
         {isFilterOpen && (
-          <motion.div 
+          <MotionDiv 
             initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
             className="bg-slate-950 overflow-hidden"
           >
@@ -116,20 +201,20 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                   ))}
                </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
 
       <div className="flex-1 overflow-y-auto px-6 py-12 space-y-20 scrollbar-hide">
          <AnimatePresence mode="popLayout">
            {groupedMenu.map((group, idx) => (
-             <motion.section key={group.section?.id || idx} layout className="space-y-12">
+             <MotionSection key={group.section?.id || idx} layout className="space-y-12">
                 {group.section && (
                   <div className="text-center relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 -z-10" />
-                    <div className="bg-white inline-flex items-center gap-4 px-8 py-2 relative">
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 -z-10 opacity-20" />
+                    <div className={`${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'} inline-flex items-center gap-4 px-8 py-2 relative rounded-full`}>
                         {group.section.icon && iconMap[group.section.icon] && React.createElement(iconMap[group.section.icon], { className: `w-5 h-5 ${currentAccent.text}` })}
-                        <h2 className="text-2xl font-bold text-slate-900 tracking-[0.2em] uppercase italic">
+                        <h2 className="text-2xl font-bold tracking-[0.2em] uppercase italic">
                         {group.section.translations?.[currentLang]?.label || group.section.label}
                         </h2>
                     </div>
@@ -140,24 +225,24 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                    {group.items.map(item => {
                      const ItemIcon = item.icon ? iconMap[item.icon] : null;
                      return (
-                     <motion.div key={item.id} layout className="group space-y-5">
+                     <MotionDiv key={item.id} layout className="group space-y-5">
                         <div className="flex gap-5 items-start">
                            {item.image && (
-                             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100">
-                                <img src={item.image} className="w-full h-full object-cover" alt={item.label} />
+                             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100/10">
+                                <img src={item.image} className="w-full h-full object-cover" alt={item.label} crossOrigin="anonymous" />
                              </div>
                            )}
                            <div className="flex-1 space-y-2">
-                              <div className="flex justify-between items-baseline gap-4 border-b border-slate-50 pb-2">
+                              <div className="flex justify-between items-baseline gap-4 border-b border-white/10 pb-2">
                                  <div className="flex items-center gap-3">
                                     {ItemIcon && <ItemIcon className={`w-4 h-4 ${currentAccent.text} opacity-50`} />}
-                                    <h3 className="text-xl font-bold text-slate-900 leading-tight">
+                                    <h3 className={`text-xl font-bold leading-tight ${menu.theme === 'neon' ? 'text-cyan-50' : menu.theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
                                     {item.translations?.[currentLang]?.label || item.label}
                                     </h3>
                                  </div>
                                  <span className={`text-xl italic font-serif ${currentAccent.text} shrink-0`}>{item.price}</span>
                               </div>
-                              <p className="text-sm text-slate-500 italic leading-relaxed font-light opacity-80">
+                              <p className={`text-sm italic leading-relaxed font-light opacity-80 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>
                                 {item.translations?.[currentLang]?.description || item.description}
                               </p>
                               
@@ -167,36 +252,36 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                                  ))}
                                  {item.isChefChoice && <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-amber-100"><Utensils className="w-2.5 h-2.5" /> Chef's Tip</span>}
                                  {item.allergens && item.allergens.length > 0 && (
-                                   <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-full">Alergény: {item.allergens.join(', ')}</span>
+                                   <span className={`text-[7px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 rounded-full border ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-slate-400 border-slate-700' : 'text-slate-400 border-slate-200'}`}>Alergény: {item.allergens.join(', ')}</span>
                                  )}
                               </div>
                            </div>
                         </div>
 
                         {item.pairing && (
-                          <div className="ml-4 md:ml-32 p-4 bg-indigo-50/40 rounded-[2rem] border border-indigo-100/50 flex items-center gap-4 group/wine">
-                             <div className="p-3 bg-white rounded-2xl text-indigo-600 shadow-sm border border-indigo-100 group-hover/wine:scale-110 transition-transform"><Wine className="w-4 h-4" /></div>
+                          <div className={`ml-4 md:ml-32 p-4 rounded-[2rem] border flex items-center gap-4 group/wine ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-indigo-950/30 border-indigo-500/20' : 'bg-indigo-50/40 border-indigo-100/50'}`}>
+                             <div className={`p-3 rounded-2xl shadow-sm border transition-transform group-hover/wine:scale-110 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-indigo-400 border-indigo-900' : 'bg-white text-indigo-600 border-indigo-100'}`}><Wine className="w-4 h-4" /></div>
                              <div className="space-y-0.5">
                                 <span className="block text-[8px] font-bold uppercase tracking-[0.3em] text-indigo-400 leading-none mb-1">Sommelier recommends</span>
-                                <p className="text-[11px] italic text-indigo-950 font-medium leading-tight">{item.translations?.[currentLang]?.pairing || item.pairing}</p>
+                                <p className={`text-[11px] italic font-medium leading-tight ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-indigo-200' : 'text-indigo-950'}`}>{item.translations?.[currentLang]?.pairing || item.pairing}</p>
                              </div>
                           </div>
                         )}
-                     </motion.div>
+                     </MotionDiv>
                    )})}
                 </div>
-             </motion.section>
+             </MotionSection>
            ))}
          </AnimatePresence>
       </div>
 
-      <footer className="p-12 text-center border-t border-slate-50">
+      <footer className="p-12 text-center border-t border-slate-50/10">
          <div className="flex items-center justify-center gap-4 mb-6 opacity-20">
-            <div className="h-px w-8 bg-slate-900" />
-            <Utensils className="w-4 h-4" />
-            <div className="h-px w-8 bg-slate-900" />
+            <div className={`h-px w-8 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-white' : 'bg-slate-900'}`} />
+            <Utensils className={`w-4 h-4 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-white' : 'text-slate-900'}`} />
+            <div className={`h-px w-8 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-white' : 'bg-slate-900'}`} />
          </div>
-         <p className="text-[9px] font-bold uppercase tracking-[0.6em] text-slate-300">{menu.name} • DIGITAL ATELIER</p>
+         <p className="text-[9px] font-bold uppercase tracking-[0.6em] text-slate-500">{menu.name} • DIGITAL ATELIER</p>
       </footer>
     </div>
   );

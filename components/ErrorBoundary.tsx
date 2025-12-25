@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
@@ -15,8 +15,8 @@ interface State {
  * Robustný Error Boundary s presným typovaním pre state a props.
  * Zachytáva neočakávané chyby pri renderovaní a poskytuje luxusný fallback.
  */
-// Fix: Extending Component directly from 'react' to resolve property typing issues where 'props' was not found on the instance.
-export class ErrorBoundary extends Component<Props, State> {
+// Fix: Using React.Component explicitly ensures that 'props' and 'state' are correctly typed and inherited within the class instance.
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false
   };
@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Accessing children directly from this.props now that inheritance is correctly typed.
-    return this.props.children;
+    // Fix: Accessing children from the props property which is now correctly inherited. Added a fallback to null for safe rendering.
+    return this.props.children || null;
   }
 }
