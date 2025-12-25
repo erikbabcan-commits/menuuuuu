@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { AiGeneratedItem } from "../types";
+import { AiGeneratedItem, ScheduleConfig } from "../types";
 import { generateLocalMenu } from "./localGenerator";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -144,5 +144,40 @@ export const generateMenuAudio = async (text: string): Promise<string | undefine
   } catch (e) {
     console.error("Audio generation failed", e);
     return undefined;
+  }
+};
+
+export const suggestSchedule = async (label: string, description: string): Promise<ScheduleConfig | null> => {
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') return null;
+  
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Analyze the food item "${label}" (${description}). Determine the most appropriate serving time category (breakfast, lunch, dinner, or all) and suggested time range (24h format HH:MM).
+      Return JSON only. Format: {"type": "breakfast"|"lunch"|"dinner"|"all", "timeStart": "HH:MM", "timeEnd": "HH:MM"}`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+             type: { type: Type.STRING, enum: ['breakfast', 'lunch', 'dinner', 'all'] },
+             timeStart: { type: Type.STRING },
+             timeEnd: { type: Type.STRING }
+          }
+        }
+      }
+    });
+    
+    const data = JSON.parse(response.text || "{}");
+    return {
+      type: data.type || 'all',
+      days: [0, 1, 2, 3, 4, 5, 6], // Default to all days
+      timeStart: data.timeStart || "08:00",
+      timeEnd: data.timeEnd || "22:00"
+    };
+  } catch (e) {
+    console.error("Schedule suggestion failed", e);
+    return null;
   }
 };

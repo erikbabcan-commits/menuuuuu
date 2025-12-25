@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Menu, MenuItem, Language } from '../types';
 import { 
-  Leaf, Wine, Filter, Utensils, Volume2, StopCircle, Loader2, Navigation
+  Leaf, Wine, Filter, Utensils, Volume2, StopCircle, Loader2, Navigation, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { themeStyles, accentColors } from '../utils/themeStyles';
@@ -280,6 +280,15 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                               </p>
                               
                               <div className="flex flex-wrap gap-2.5 mt-3">
+                                 {/* Availability Badge */}
+                                 {item.availability && (item.availability.timeStart || item.availability.type !== 'all') && (
+                                   <span className={`text-[7px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 rounded-full flex items-center gap-1 border ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-indigo-300 border-indigo-900 bg-indigo-950/30' : 'text-indigo-600 border-indigo-100 bg-indigo-50'}`}>
+                                     <Clock className="w-2.5 h-2.5" />
+                                     {item.availability.type !== 'all' && <span>{item.availability.type}</span>}
+                                     {item.availability.timeStart && <span>{item.availability.timeStart} - {item.availability.timeEnd}</span>}
+                                   </span>
+                                 )}
+
                                  {item.dietaryTags?.map(tag => (
                                    <span key={tag} className="text-[7px] font-bold uppercase tracking-[0.2em] text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-100"><Leaf className="w-2.5 h-2.5" /> {tag}</span>
                                  ))}

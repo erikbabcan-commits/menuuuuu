@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Reorder, motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -5,12 +6,12 @@ import {
   Sparkles, Edit2, X, DollarSign,
   Monitor, Smartphone, Type as TypeIcon, Image as ImageIcon,
   Wine, Leaf, RefreshCw, RotateCcw, RotateCw, FileDown, Languages, Utensils,
-  Settings, Search, Camera, Globe, ExternalLink, Palette
+  Settings, Search, Camera, Globe, ExternalLink, Palette, Clock, Calendar
 } from 'lucide-react';
 import { Menu, MenuItem, PlanTier, Language, FontFamily, AiGeneratedItem, MenuTheme } from '../types';
 import { Button } from './ui/Button';
 import { MenuPreview } from './MenuPreview';
-import { recommendWinePairing, translateMenuItem, generateMenuStructure, generateDishImage, getGastronomyTrends } from '../services/geminiService';
+import { recommendWinePairing, translateMenuItem, generateMenuStructure, generateDishImage, getGastronomyTrends, suggestSchedule } from '../services/geminiService';
 import { accentColors } from '../utils/themeStyles';
 import { useHistory } from '../hooks/useHistory';
 import html2canvas from 'html2canvas';
@@ -24,6 +25,7 @@ const MotionDiv = motion.div as any;
 
 const DIETARY_OPTIONS = ['vegan', 'vegetarian', 'gluten-free', 'lactose-free', 'keto', 'paleo', 'bio'];
 const ALLERGENS = Array.from({ length: 14 }, (_, i) => (i + 1).toString());
+const DAYS = ['Ne', 'Po', 'Ut', 'St', 'Št', 'Pi', 'So'];
 
 const FONTS: { id: FontFamily; label: string; pair: string }[] = [
   { id: 'serif', label: 'Classic Serif', pair: 'Playfair + Inter' },
@@ -75,6 +77,7 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     isGeneratingTrends: false,
     isGeneratingWine: false,
     isGeneratingImage: false,
+    isGeneratingSchedule: false,
     isTranslating: false,
     isExporting: false,
     editingItemId: null as string | null,
@@ -170,6 +173,15 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
     const pairing = await recommendWinePairing(item.label, item.description || '');
     updateItem(item.id, { pairing });
     updateUiState({ isGeneratingWine: false });
+  };
+
+  const handleAiSchedule = async (item: MenuItem) => {
+    updateUiState({ isGeneratingSchedule: true });
+    const schedule = await suggestSchedule(item.label, item.description || '');
+    if (schedule) {
+      updateItem(item.id, { availability: schedule });
+    }
+    updateUiState({ isGeneratingSchedule: false });
   };
 
   const handleExportPdf = async () => {
@@ -408,16 +420,19 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
             </div>
 
             <Reorder.Group axis="y" values={menuData.items} onReorder={(items) => updateMenuData({ items })} className="space-y-3">
-               {menuData.items.map(item => (
+               {menuData.items.map(item => {
+                 const ListIcon = item.icon ? iconMap[item.icon] : null;
+                 return (
                  <Reorder.Item key={item.id} value={item} className={`p-4 bg-white border border-slate-200 rounded-2xl flex items-center gap-3 cursor-grab active:cursor-grabbing shadow-sm transition-all hover:shadow-md ${item.type === 'section' ? 'border-l-4 border-l-slate-900 bg-slate-50/50' : ''}`}>
                     <GripVertical className="w-4 h-4 text-slate-300" />
-                    <div className="flex-1 truncate">
+                    <div className="flex-1 truncate flex items-center gap-3">
+                       {ListIcon && <ListIcon className="w-4 h-4 text-slate-500" />}
                        <span className={`text-sm font-semibold ${item.type === 'section' ? 'uppercase tracking-widest text-slate-900' : 'text-slate-700'}`}>{item.label}</span>
                     </div>
                     <button onClick={() => updateUiState({ editingItemId: item.id })} className="p-2 hover:bg-slate-100 rounded-xl transition-colors"><Edit2 className="w-4 h-4 text-slate-400" /></button>
                     <button onClick={() => updateMenuData({ items: menuData.items.filter(i => i.id !== item.id) })} className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
                  </Reorder.Item>
-               ))}
+               )})}
             </Reorder.Group>
           </section>
         </MotionDiv>
@@ -434,200 +449,353 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
               </div>
            </div>
         </div>
-      </div>
 
-      <AnimatePresence>
-        {uiState.editingItemId && editingItem && (
-          <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center lg:p-10">
-             <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
-             <MotionDiv 
-               layoutId="item-modal" 
-               className="relative w-full max-w-5xl bg-white rounded-t-[3rem] lg:rounded-[3.5rem] shadow-2xl flex flex-col max-h-[95dvh] overflow-hidden border-t lg:border border-slate-200"
-             >
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                   <div className="flex items-center gap-5">
-                      <button 
-                        onClick={() => setIconPickerOpen(!iconPickerOpen)}
-                        className={`w-14 h-14 rounded-2xl ${currentAccent.bg} text-white flex items-center justify-center shadow-lg border border-black/10 relative overflow-visible hover:scale-105 transition-transform`}
-                      >
-                        {SelectedIcon ? <SelectedIcon className="w-7 h-7" /> : <Settings className="w-7 h-7" />}
-                        <Suspense fallback={null}>
-                          <IconPicker 
-                            isOpen={iconPickerOpen} 
-                            onClose={() => setIconPickerOpen(false)} 
-                            onSelect={icon => updateItem(editingItem.id, { icon })}
-                            selectedIcon={editingItem.icon}
-                            placement="bottom"
-                          />
-                        </Suspense>
-                      </button>
-                      <div>
-                        <h2 className="text-2xl font-bold font-serif text-slate-900">{editingItem.label}</h2>
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => updateItem(editingItem.id, { type: 'dish' })} className={`text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-lg transition-all border ${editingItem.type !== 'section' ? 'bg-indigo-600 text-white border-indigo-700 shadow-md' : 'bg-slate-100 text-slate-400 border-slate-200 hover:border-slate-300'}`}>Jedlo</button>
-                          <button onClick={() => updateItem(editingItem.id, { type: 'section' })} className={`text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-lg transition-all border ${editingItem.type === 'section' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-100 text-slate-400 border-slate-200 hover:border-slate-300'}`}>Nadpis Sekcie</button>
+        <AnimatePresence>
+          {uiState.editingItemId && editingItem && (
+            <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center lg:p-10">
+               <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => updateUiState({ editingItemId: null })} className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+               
+               <MotionDiv 
+                 layoutId="item-modal" 
+                 className="relative w-full max-w-6xl bg-[#f8fafc] rounded-t-[2rem] lg:rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95dvh] lg:max-h-[90dvh] overflow-hidden border border-white/50"
+               >
+                  {/* Header Bar */}
+                  <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+                     <div className="flex items-center gap-6">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editácia položky</span>
+                           <h2 className="text-2xl font-serif font-bold text-slate-900 line-clamp-1">{editingItem.label || 'Bez názvu'}</h2>
                         </div>
-                      </div>
-                   </div>
-                   <button onClick={() => updateUiState({ editingItemId: null })} className="p-4 bg-slate-100 hover:bg-slate-200 rounded-full transition-all border border-transparent hover:border-slate-300"><X className="w-7 h-7 text-slate-500" /></button>
-                </div>
+                        
+                        {/* Type Toggle */}
+                        <div className="bg-slate-100 p-1 rounded-xl flex border border-slate-200 ml-4">
+                           <button 
+                             onClick={() => updateItem(editingItem.id, { type: 'dish' })}
+                             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${editingItem.type !== 'section' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                           >
+                             Jedlo
+                           </button>
+                           <button 
+                             onClick={() => updateItem(editingItem.id, { type: 'section' })}
+                             className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${editingItem.type === 'section' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                           >
+                             Sekcia
+                           </button>
+                        </div>
+                     </div>
 
-                <div className="p-10 overflow-y-auto space-y-12 scrollbar-hide pb-32">
-                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                      <div className="space-y-8">
-                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Názov Položky</label>
-                            <div className="relative group">
-                              <input value={editingItem.label} onChange={e => updateItem(editingItem.id, { label: e.target.value })} className="w-full bg-slate-50 p-5 rounded-2xl border border-slate-200 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xl shadow-inner" />
-                              <button 
-                                onClick={() => handleAutoTranslate(editingItem)} 
-                                disabled={uiState.isTranslating}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
-                                title="AI Preklad"
-                              >
-                                <Languages className={`w-4 h-4 ${uiState.isTranslating ? 'animate-pulse text-indigo-500' : ''}`} />
-                              </button>
-                            </div>
-                         </div>
-                         
-                         <div className="grid grid-cols-2 gap-6">
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Cena</label>
-                              <div className="relative">
-                                <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                <input value={editingItem.price || ''} onChange={e => updateItem(editingItem.id, { price: e.target.value })} className="w-full bg-slate-50 pl-12 p-5 rounded-2xl border border-slate-200 focus:bg-white outline-none italic font-serif text-xl shadow-inner" placeholder="0.00" />
-                              </div>
-                           </div>
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">URL / Link</label>
-                              <div className="relative">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                <input value={editingItem.url || ''} onChange={e => updateItem(editingItem.id, { url: e.target.value })} className="w-full bg-slate-50 pl-12 p-5 rounded-2xl border border-slate-200 focus:bg-white outline-none text-sm font-medium shadow-inner" placeholder="#o-nas" />
-                              </div>
-                           </div>
-                         </div>
+                     <div className="flex items-center gap-3">
+                         <Button variant="ghost" onClick={() => updateUiState({ editingItemId: null })}>
+                           <X className="w-6 h-6" />
+                         </Button>
+                     </div>
+                  </div>
 
-                         <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Alergény (1-14)</label>
-                            <div className="grid grid-cols-7 gap-2 bg-slate-50 p-4 rounded-3xl border border-slate-200 shadow-inner">
-                               {ALLERGENS.map(num => (
-                                 <button 
-                                  key={num} 
-                                  onClick={() => {
-                                    const next = (editingItem.allergens || []).includes(num) ? (editingItem.allergens || []).filter(n => n !== num) : [...(editingItem.allergens || []), num];
-                                    updateItem(editingItem.id, { allergens: next });
-                                  }}
-                                  className={`w-10 h-10 rounded-xl text-[12px] font-bold border transition-all flex items-center justify-center ${editingItem.allergens?.includes(num) ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-110' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
-                                 >
-                                   {num}
-                                 </button>
-                               ))}
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="space-y-8">
-                         <div className="space-y-4">
-                            <div className="flex items-center justify-between px-1">
-                                <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest">Obrázok Položky</label>
-                                {editingItem.type !== 'section' && (
-                                  <button 
-                                    onClick={() => handleAiPhotoGenerate(editingItem)}
-                                    disabled={uiState.isGeneratingImage}
-                                    className="flex items-center gap-2 text-[9px] font-bold uppercase text-indigo-600 hover:text-indigo-800 transition-colors"
-                                  >
-                                    <Camera className={`w-3 h-3 ${uiState.isGeneratingImage ? 'animate-pulse' : ''}`} /> AI Foto Ateliér
-                                  </button>
-                                )}
-                            </div>
-                            <div className="relative h-48 w-full rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center group/img">
-                               {uiState.isGeneratingImage ? (
-                                  <div className="flex flex-col items-center gap-3">
-                                     <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-                                     <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-600">Generuje sa vizuál...</span>
-                                  </div>
-                               ) : editingItem.image ? (
-                                 <>
-                                   <img 
-                                      src={editingItem.image} 
-                                      className="w-full h-full object-cover" 
-                                      alt="Item" 
-                                      crossOrigin="anonymous"
-                                      onError={(e) => (e.currentTarget.style.display = 'none')} 
-                                    />
-                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                      <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
-                                      <button onClick={() => updateItem(editingItem.id, { image: undefined })} className="bg-rose-500 text-white p-2 rounded-xl shadow-xl hover:bg-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                   </div>
-                                 </>
-                               ) : (
-                                 <div className="flex flex-col items-center gap-3 text-slate-300">
-                                    <ImageIcon className="w-8 h-8" />
-                                    <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer hover:underline"><input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/>Pridať fotografiu</label>
+                  {/* Scrollable Content */}
+                  <div className="flex-1 overflow-y-auto p-8 lg:p-10 space-y-10 scrollbar-hide">
+                     
+                     {/* General Info Section */}
+                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        
+                        {/* Left Column */}
+                        <div className="lg:col-span-8 space-y-8">
+                           
+                           {/* Name & Icon Input Group */}
+                           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                              <div className="flex gap-4">
+                                 {/* Icon Trigger */}
+                                 <div className="relative">
+                                    <button 
+                                      onClick={() => setIconPickerOpen(!iconPickerOpen)}
+                                      className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-slate-200 transition-colors ${editingItem.icon ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}
+                                    >
+                                       {SelectedIcon ? <SelectedIcon className="w-8 h-8" /> : <Settings className="w-8 h-8" />}
+                                    </button>
+                                    <Suspense fallback={null}>
+                                       <IconPicker 
+                                          isOpen={iconPickerOpen} 
+                                          onClose={() => setIconPickerOpen(false)} 
+                                          onSelect={icon => updateItem(editingItem.id, { icon })}
+                                          selectedIcon={editingItem.icon}
+                                          placement="bottom"
+                                       />
+                                    </Suspense>
                                  </div>
-                               )}
-                            </div>
-                         </div>
-                         <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Diétne preferencie</label>
-                            <div className="flex flex-wrap gap-2 bg-slate-50 p-4 rounded-3xl border border-slate-200 shadow-inner">
-                               {DIETARY_OPTIONS.map(tag => (
-                                 <button 
-                                  key={tag} 
-                                  onClick={() => {
-                                    const next = (editingItem.dietaryTags || []).includes(tag) ? (editingItem.dietaryTags || []).filter(t => t !== tag) : [...(editingItem.dietaryTags || []), tag];
-                                    updateItem(editingItem.id, { dietaryTags: next });
-                                  }}
-                                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all ${editingItem.dietaryTags?.includes(tag) ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
-                                 >
-                                   {tag}
-                                 </button>
-                               ))}
-                            </div>
-                         </div>
-                      </div>
-                   </div>
 
-                   {editingItem.type !== 'section' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                       <div className="space-y-4">
-                          <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest px-1">Gastronomický Popis</label>
-                          <textarea 
-                            value={editingItem.description || ''} 
-                            onChange={e => updateItem(editingItem.id, { description: e.target.value })} 
-                            className="w-full h-40 bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 focus:bg-white outline-none text-lg italic leading-relaxed shadow-inner" 
-                            placeholder="Popíšte emóciu a zloženie..."
-                          />
-                       </div>
-                       <div className="space-y-4">
-                          <div className="flex items-center justify-between px-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-2 tracking-widest"><Wine className="w-3.5 h-3.5" /> AI Somelier</label>
-                            <button 
-                              onClick={() => handleWinePairing(editingItem)} 
-                              disabled={uiState.isGeneratingWine}
-                              className="text-[9px] font-bold uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all shadow-sm"
-                            >
-                              {uiState.isGeneratingWine ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Odporučiť párovanie'}
-                            </button>
-                          </div>
-                          <textarea 
-                            value={editingItem.pairing || ''} 
-                            onChange={e => updateItem(editingItem.id, { pairing: e.target.value })}
-                            className="w-full h-40 bg-indigo-50/30 border border-indigo-100 rounded-[2.5rem] p-8 italic text-lg text-indigo-900 outline-none focus:bg-white transition-all resize-none shadow-inner"
-                            placeholder="Víno, ktoré doplní zážitok..."
-                          />
-                       </div>
-                    </div>
-                   )}
-                </div>
+                                 {/* Label Input */}
+                                 <div className="flex-1 relative group">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest absolute -top-2.5 left-4 bg-white px-2">Názov {editingItem.type === 'section' ? 'Sekcie' : 'Jedla'}</label>
+                                    <input 
+                                      value={editingItem.label} 
+                                      onChange={e => updateItem(editingItem.id, { label: e.target.value })} 
+                                      className="w-full h-16 bg-transparent px-4 text-xl font-bold text-slate-900 outline-none border-b-2 border-slate-100 focus:border-indigo-500 transition-colors placeholder:text-slate-200"
+                                      placeholder={editingItem.type === 'section' ? "Napr. Predjedlá" : "Napr. Sviečková na smotane"}
+                                    />
+                                    {/* Translation Button */}
+                                    <button 
+                                       onClick={() => handleAutoTranslate(editingItem)} 
+                                       disabled={uiState.isTranslating}
+                                       className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-indigo-600 transition-colors"
+                                       title="AI Preklad"
+                                    >
+                                       <Languages className={`w-5 h-5 ${uiState.isTranslating ? 'animate-pulse text-indigo-500' : ''}`} />
+                                    </button>
+                                 </div>
+                              </div>
 
-                <div className="p-8 bg-slate-950 border-t border-slate-800 flex gap-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
-                   <Button variant="primary" className="flex-1 rounded-[2rem] bg-indigo-600 hover:bg-indigo-500 text-white font-bold h-20 text-xl border border-indigo-400/20" onClick={() => updateUiState({ editingItemId: null })}>Uložiť zmeny</Button>
-                </div>
-             </MotionDiv>
-          </div>
-        )}
-      </AnimatePresence>
+                              {/* Description - Common for both */}
+                              <div className="relative">
+                                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2 block">Popis {editingItem.type === 'section' ? '(Voliteľné)' : ''}</label>
+                                  <textarea 
+                                    value={editingItem.description || ''} 
+                                    onChange={e => updateItem(editingItem.id, { description: e.target.value })} 
+                                    className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none min-h-[120px] resize-y text-slate-600 leading-relaxed" 
+                                    placeholder={editingItem.type === 'section' ? "Krátky popis sekcie..." : "Detailný popis zloženia a chutí..."}
+                                  />
+                              </div>
+                           </div>
+
+                           {/* DISH SPECIFIC FIELDS */}
+                           {editingItem.type !== 'section' && (
+                             <>
+                                {/* Allergens & Dietary */}
+                                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                                   <div>
+                                      <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-3 block flex items-center gap-2">
+                                        <Leaf className="w-3 h-3" /> Diétne značky
+                                      </label>
+                                      <div className="flex flex-wrap gap-2">
+                                         {DIETARY_OPTIONS.map(tag => (
+                                           <button 
+                                            key={tag} 
+                                            onClick={() => {
+                                              const next = (editingItem.dietaryTags || []).includes(tag) ? (editingItem.dietaryTags || []).filter(t => t !== tag) : [...(editingItem.dietaryTags || []), tag];
+                                              updateItem(editingItem.id, { dietaryTags: next });
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${editingItem.dietaryTags?.includes(tag) ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                                           >
+                                             {tag}
+                                           </button>
+                                         ))}
+                                      </div>
+                                   </div>
+                                   
+                                   <div className="h-px bg-slate-100" />
+
+                                   <div>
+                                      <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-3 block flex items-center gap-2">
+                                        <Utensils className="w-3 h-3" /> Alergény
+                                      </label>
+                                      <div className="flex flex-wrap gap-2">
+                                         {ALLERGENS.map(num => (
+                                           <button 
+                                            key={num} 
+                                            onClick={() => {
+                                              const next = (editingItem.allergens || []).includes(num) ? (editingItem.allergens || []).filter(n => n !== num) : [...(editingItem.allergens || []), num];
+                                              updateItem(editingItem.id, { allergens: next });
+                                            }}
+                                            className={`w-9 h-9 rounded-lg text-xs font-bold border transition-all flex items-center justify-center ${editingItem.allergens?.includes(num) ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-slate-300'}`}
+                                           >
+                                             {num}
+                                           </button>
+                                         ))}
+                                      </div>
+                                   </div>
+                                </div>
+
+                                {/* Scheduling Section */}
+                                <div className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200 shadow-inner space-y-5">
+                                   <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center"><Calendar className="w-4 h-4" /></div>
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Dostupnosť & Časovanie</h3>
+                                      </div>
+                                      <button 
+                                        onClick={() => handleAiSchedule(editingItem)}
+                                        disabled={uiState.isGeneratingSchedule}
+                                        className="text-[9px] font-bold uppercase text-indigo-600 bg-white px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-50 transition-all flex items-center gap-2 shadow-sm"
+                                      >
+                                        {uiState.isGeneratingSchedule ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                        AI Návrh
+                                      </button>
+                                   </div>
+                                   
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div className="space-y-3">
+                                         <label className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">Typ jedla</label>
+                                         <div className="flex flex-wrap gap-2">
+                                            {['all', 'breakfast', 'lunch', 'dinner'].map((type: any) => (
+                                              <button
+                                                key={type}
+                                                onClick={() => updateItem(editingItem.id, { availability: { ...(editingItem.availability || { days: [0,1,2,3,4,5,6] }), type } })}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all ${editingItem.availability?.type === type || (!editingItem.availability && type === 'all') ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                              >
+                                                {type === 'all' ? 'Všetko' : type}
+                                              </button>
+                                            ))}
+                                         </div>
+                                      </div>
+                                      <div className="space-y-3">
+                                         <label className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">Časové okno</label>
+                                         <div className="flex items-center gap-3">
+                                            <div className="relative flex-1">
+                                               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                               <input 
+                                                 type="time" 
+                                                 value={editingItem.availability?.timeStart || ''} 
+                                                 onChange={e => updateItem(editingItem.id, { availability: { ...(editingItem.availability || { type: 'all', days: [0,1,2,3,4,5,6] }), timeStart: e.target.value } })}
+                                                 className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                                               />
+                                            </div>
+                                            <span className="text-slate-300">-</span>
+                                            <div className="relative flex-1">
+                                               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                               <input 
+                                                 type="time" 
+                                                 value={editingItem.availability?.timeEnd || ''} 
+                                                 onChange={e => updateItem(editingItem.id, { availability: { ...(editingItem.availability || { type: 'all', days: [0,1,2,3,4,5,6] }), timeEnd: e.target.value } })}
+                                                 className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                                               />
+                                            </div>
+                                         </div>
+                                      </div>
+                                   </div>
+
+                                   <div className="space-y-3">
+                                      <label className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">Dni v týždni</label>
+                                      <div className="flex gap-2">
+                                         {DAYS.map((day, idx) => (
+                                            <button
+                                              key={idx}
+                                              onClick={() => {
+                                                const currentDays = editingItem.availability?.days || [0,1,2,3,4,5,6];
+                                                const newDays = currentDays.includes(idx) 
+                                                  ? currentDays.filter(d => d !== idx)
+                                                  : [...currentDays, idx];
+                                                updateItem(editingItem.id, { availability: { ...(editingItem.availability || { type: 'all' }), days: newDays } });
+                                              }}
+                                              className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${editingItem.availability?.days?.includes(idx) || (!editingItem.availability && true) ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'}`}
+                                            >
+                                              {day}
+                                            </button>
+                                         ))}
+                                      </div>
+                                   </div>
+                                </div>
+                             </>
+                           )}
+                        </div>
+
+                        {/* Right Column (Visuals & Extras) */}
+                        <div className="lg:col-span-4 space-y-8">
+                            {editingItem.type !== 'section' ? (
+                               <>
+                                  {/* Price & URL Card */}
+                                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                                      <div className="space-y-2">
+                                         <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Cena</label>
+                                         <div className="relative">
+                                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input 
+                                              value={editingItem.price || ''} 
+                                              onChange={e => updateItem(editingItem.id, { price: e.target.value })} 
+                                              className="w-full bg-slate-50 pl-10 pr-4 py-3 rounded-xl border border-slate-200 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                              placeholder="0.00"
+                                            />
+                                         </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                         <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">URL (Voliteľné)</label>
+                                         <div className="relative">
+                                            <ExternalLink className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input 
+                                              value={editingItem.url || ''} 
+                                              onChange={e => updateItem(editingItem.id, { url: e.target.value })} 
+                                              className="w-full bg-slate-50 pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                              placeholder="#detail"
+                                            />
+                                         </div>
+                                      </div>
+                                  </div>
+
+                                  {/* Image Card */}
+                                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                                      <div className="flex items-center justify-between">
+                                          <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Fotografia</label>
+                                          <button 
+                                            onClick={() => handleAiPhotoGenerate(editingItem)}
+                                            disabled={uiState.isGeneratingImage}
+                                            className="text-[9px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                          >
+                                            <Camera className="w-3 h-3" /> AI Foto
+                                          </button>
+                                      </div>
+                                      <div className="relative h-48 w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center group/img">
+                                         {uiState.isGeneratingImage ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                               <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                                               <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-600">Generuje sa vizuál...</span>
+                                            </div>
+                                         ) : editingItem.image ? (
+                                           <>
+                                             <img 
+                                                src={editingItem.image} 
+                                                className="w-full h-full object-cover" 
+                                                alt="Item" 
+                                                crossOrigin="anonymous"
+                                                onError={(e) => (e.currentTarget.style.display = 'none')} 
+                                              />
+                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                                <label className="bg-white text-slate-950 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer shadow-xl">Vymeniť<input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/></label>
+                                                <button onClick={() => updateItem(editingItem.id, { image: undefined })} className="bg-rose-500 text-white p-2 rounded-xl shadow-xl hover:bg-rose-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                             </div>
+                                           </>
+                                         ) : (
+                                           <div className="flex flex-col items-center gap-3 text-slate-300">
+                                              <ImageIcon className="w-8 h-8" />
+                                              <label className="text-[10px] font-bold uppercase text-indigo-600 cursor-pointer hover:underline"><input type="file" className="hidden" accept="image/*" onChange={e => e.target.files && handleItemImageUpload(editingItem.id, e.target.files[0])}/>Pridať fotografiu</label>
+                                           </div>
+                                         )}
+                                      </div>
+                                  </div>
+
+                                  {/* Wine Pairing */}
+                                  <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-3xl border border-indigo-100 shadow-sm space-y-4">
+                                      <div className="flex items-center justify-between">
+                                          <label className="text-[10px] font-bold uppercase text-indigo-400 tracking-widest flex items-center gap-2"><Wine className="w-3 h-3" /> Párovanie</label>
+                                          <button onClick={() => handleWinePairing(editingItem)} disabled={uiState.isGeneratingWine} className="p-1.5 bg-white rounded-lg shadow-sm text-indigo-600 hover:scale-105 transition-transform"><Sparkles className={`w-4 h-4 ${uiState.isGeneratingWine ? 'animate-spin' : ''}`} /></button>
+                                      </div>
+                                      <textarea 
+                                        value={editingItem.pairing || ''}
+                                        onChange={e => updateItem(editingItem.id, { pairing: e.target.value })}
+                                        className="w-full bg-white/50 border border-indigo-100/50 rounded-xl p-3 text-sm italic text-indigo-900 outline-none resize-none h-24 placeholder:text-indigo-300"
+                                        placeholder="Odporúčanie someliéra..."
+                                      />
+                                  </div>
+                               </>
+                            ) : (
+                               // Section specifics
+                               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 text-center text-slate-400 text-sm">
+                                  <TypeIcon className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                  <p>Sekcie slúžia na organizáciu menu. Neobsahujú cenu ani alergény.</p>
+                               </div>
+                            )}
+                        </div>
+                     </div>
+                     
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="p-6 bg-white border-t border-slate-200 flex justify-end gap-4 shrink-0">
+                     <Button variant="primary" size="lg" onClick={() => updateUiState({ editingItemId: null })} className="rounded-xl px-12 bg-slate-900 text-white">
+                        Uložiť Zmeny
+                     </Button>
+                  </div>
+
+               </MotionDiv>
+            </div>
+          )}
+        </AnimatePresence>
     </div>
   );
 };

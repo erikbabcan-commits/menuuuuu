@@ -3,9 +3,16 @@ export type MenuTheme = 'glass' | 'dark' | 'light' | 'neon';
 export type PlanTier = 'basic' | 'business' | 'corporate' | 'enterprise';
 export type AccentColor = 'indigo' | 'gold' | 'rose' | 'emerald' | 'slate';
 export type FontFamily = 'serif' | 'sans' | 'montserrat' | 'playfair' | 'cormorant' | 'oswald';
-export type MealTime = 'all' | 'breakfast' | 'lunch' | 'dinner';
+export type MealTime = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'custom';
 export type Language = 'sk' | 'en' | 'de';
 export type ItemType = 'dish' | 'section';
+
+export interface ScheduleConfig {
+  type: MealTime;
+  days: number[]; // 0 (Sunday) - 6 (Saturday)
+  timeStart?: string; // HH:MM
+  timeEnd?: string; // HH:MM
+}
 
 export interface MenuItem {
   id: string;
@@ -22,7 +29,7 @@ export interface MenuItem {
   isLimitedEdition?: boolean;
   dietaryTags?: string[];
   allergens?: string[];
-  schedule?: MealTime;
+  availability?: ScheduleConfig; // Changed from simple 'schedule' string
   translations?: Partial<Record<Language, { label: string; description?: string; pairing?: string }>>;
 }
 
