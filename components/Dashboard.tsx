@@ -1,6 +1,7 @@
+
 import React, { useState, useRef } from 'react';
 import { 
-  Plus, Activity, QrCode, Trash2, Smartphone, X, Zap, ArrowUpRight, Layout, Download, FileText, Utensils
+  Plus, Activity, QrCode, Trash2, Smartphone, X, Zap, ArrowUpRight, Layout, Download, FileText, Utensils, Copy, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, PlanTier } from '../types';
@@ -36,6 +37,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [activeMenuForQr, setActiveMenuForQr] = useState<Menu | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const downloadQrCard = async () => {
@@ -61,6 +63,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const copyLink = () => {
+    if (!activeMenuForQr) return;
+    const url = `https://luxury-menu.builder/v/${activeMenuForQr.id}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -209,6 +219,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         size={180}
                         level="H"
                         includeMargin={false}
+                        fgColor={accentColors[activeMenuForQr.accentColor].hex}
                         imageSettings={{
                           src: "https://placehold.co/80x80/000000/ffffff?text=LMB",
                           height: 34,
@@ -225,13 +236,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                  </div>
 
-                 <div className="w-full space-y-4 relative z-10">
-                    <Button variant="primary" className="w-full h-14 rounded-2xl bg-slate-950 text-white font-bold text-sm border border-slate-800" onClick={downloadQrCard} isLoading={isExporting}>
-                        <Download className="w-4 h-4 mr-2" /> Stiahnuť kartu pre tlač
+                 <div className="w-full grid grid-cols-5 gap-2 relative z-10">
+                    <Button variant="primary" className="col-span-4 h-14 rounded-2xl bg-slate-950 text-white font-bold text-sm border border-slate-800" onClick={downloadQrCard} isLoading={isExporting}>
+                        <Download className="w-4 h-4 mr-2" /> Stiahnuť
                     </Button>
-                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                      <FileText className="w-3 h-3" /> PNG • 300 DPI • High Quality
-                    </p>
+                    <button 
+                      onClick={copyLink} 
+                      className={`col-span-1 h-14 rounded-2xl flex items-center justify-center border transition-all ${copied ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                    >
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </button>
                  </div>
               </MotionDiv>
            </div>

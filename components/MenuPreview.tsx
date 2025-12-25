@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef } from 'react';
+
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Menu, MenuItem, Language } from '../types';
 import { 
-  Leaf, Wine, Filter, Utensils, Volume2, StopCircle, Loader2
+  Leaf, Wine, Filter, Utensils, Volume2, StopCircle, Loader2, Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { themeStyles, accentColors } from '../utils/themeStyles';
@@ -31,6 +32,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
   const [currentLang, setCurrentLang] = useState<Language>('sk');
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -137,10 +139,23 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
     }
   };
 
+  const scrollToSection = (index: number) => {
+    const el = document.getElementById(`section-${index}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className={`w-full h-full relative overflow-x-hidden flex flex-col ${currentTheme.background} ${getFontFamily()} scrollbar-hide`} style={{ fontSize: `${baseFontSize}px` }}>
+      
+      {/* Noise Texture Overlay for premium feel */}
+      {(menu.theme === 'dark' || menu.theme === 'neon') && (
+        <div className="absolute inset-0 bg-noise pointer-events-none opacity-20 z-[1]" />
+      )}
+
       {/* Dynamic Header */}
-      <div className="relative h-64 shrink-0 overflow-hidden">
+      <div className="relative h-64 shrink-0 overflow-hidden z-10">
         <div className="absolute inset-0">
           {menu.heroImageUrl ? (
             <img src={menu.heroImageUrl} className="w-full h-full object-cover" alt="Hero" crossOrigin="anonymous" />
@@ -182,7 +197,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         {isFilterOpen && (
           <MotionDiv 
             initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-            className="bg-slate-950 overflow-hidden"
+            className="bg-slate-950 overflow-hidden relative z-20"
           >
             <div className="p-6 space-y-4">
                <div className="flex items-center justify-between">
@@ -205,14 +220,32 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 overflow-y-auto px-6 py-12 space-y-20 scrollbar-hide">
+      {/* Sticky Section Navigation */}
+      {groupedMenu.some(g => g.section) && (
+        <div className={`sticky top-0 z-30 py-3 px-4 border-b flex gap-2 overflow-x-auto scrollbar-hide backdrop-blur-md ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-black/40 border-white/10' : 'bg-white/60 border-slate-100'}`}>
+           {groupedMenu.map((group, idx) => {
+             if (!group.section) return null;
+             return (
+               <button 
+                 key={idx}
+                 onClick={() => scrollToSection(idx)}
+                 className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-white/10 text-white border-white/10 hover:bg-white/20' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+               >
+                 {group.section.translations?.[currentLang]?.label || group.section.label}
+               </button>
+             );
+           })}
+        </div>
+      )}
+
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-12 space-y-20 scrollbar-hide relative z-0">
          <AnimatePresence mode="popLayout">
            {groupedMenu.map((group, idx) => (
-             <MotionSection key={group.section?.id || idx} layout className="space-y-12">
+             <MotionSection id={`section-${idx}`} key={group.section?.id || idx} layout className="space-y-12 scroll-mt-24">
                 {group.section && (
                   <div className="text-center relative">
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 -z-10 opacity-20" />
-                    <div className={`${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'} inline-flex items-center gap-4 px-8 py-2 relative rounded-full`}>
+                    <div className={`${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'} inline-flex items-center gap-4 px-8 py-2 relative rounded-full shadow-lg`}>
                         {group.section.icon && iconMap[group.section.icon] && React.createElement(iconMap[group.section.icon], { className: `w-5 h-5 ${currentAccent.text}` })}
                         <h2 className="text-2xl font-bold tracking-[0.2em] uppercase italic">
                         {group.section.translations?.[currentLang]?.label || group.section.label}
@@ -228,7 +261,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                      <MotionDiv key={item.id} layout className="group space-y-5">
                         <div className="flex gap-5 items-start">
                            {item.image && (
-                             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100/10">
+                             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden shrink-0 shadow-xl border border-slate-100/10 group-hover:scale-[1.02] transition-transform duration-500">
                                 <img src={item.image} className="w-full h-full object-cover" alt={item.label} crossOrigin="anonymous" />
                              </div>
                            )}
@@ -242,7 +275,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                                  </div>
                                  <span className={`text-xl italic font-serif ${currentAccent.text} shrink-0`}>{item.price}</span>
                               </div>
-                              <p className={`text-sm italic leading-relaxed font-light opacity-80 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>
+                              <p className={`text-sm italic leading-relaxed font-light opacity-80 text-justify ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-slate-400' : 'text-slate-500'}`}>
                                 {item.translations?.[currentLang]?.description || item.description}
                               </p>
                               
@@ -259,9 +292,12 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
                         </div>
 
                         {item.pairing && (
-                          <div className={`ml-4 md:ml-32 p-4 rounded-[2rem] border flex items-center gap-4 group/wine ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-indigo-950/30 border-indigo-500/20' : 'bg-indigo-50/40 border-indigo-100/50'}`}>
-                             <div className={`p-3 rounded-2xl shadow-sm border transition-transform group-hover/wine:scale-110 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-indigo-400 border-indigo-900' : 'bg-white text-indigo-600 border-indigo-100'}`}><Wine className="w-4 h-4" /></div>
-                             <div className="space-y-0.5">
+                          <div className={`ml-4 md:ml-32 p-4 rounded-[2rem] border flex items-center gap-4 group/wine relative overflow-hidden ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-indigo-950/30 border-indigo-500/20' : 'bg-indigo-50/40 border-indigo-100/50'}`}>
+                             {/* Wine glass reflection effect */}
+                             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/wine:translate-x-[100%] transition-transform duration-1000" />
+                             
+                             <div className={`p-3 rounded-2xl shadow-sm border transition-transform group-hover/wine:scale-110 relative z-10 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-slate-900 text-indigo-400 border-indigo-900' : 'bg-white text-indigo-600 border-indigo-100'}`}><Wine className="w-4 h-4" /></div>
+                             <div className="space-y-0.5 relative z-10">
                                 <span className="block text-[8px] font-bold uppercase tracking-[0.3em] text-indigo-400 leading-none mb-1">Sommelier recommends</span>
                                 <p className={`text-[11px] italic font-medium leading-tight ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-indigo-200' : 'text-indigo-950'}`}>{item.translations?.[currentLang]?.pairing || item.pairing}</p>
                              </div>
@@ -275,7 +311,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ menu }) => {
          </AnimatePresence>
       </div>
 
-      <footer className="p-12 text-center border-t border-slate-50/10">
+      <footer className="p-12 text-center border-t border-slate-50/10 relative z-10">
          <div className="flex items-center justify-center gap-4 mb-6 opacity-20">
             <div className={`h-px w-8 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'bg-white' : 'bg-slate-900'}`} />
             <Utensils className={`w-4 h-4 ${menu.theme === 'dark' || menu.theme === 'neon' ? 'text-white' : 'text-slate-900'}`} />
