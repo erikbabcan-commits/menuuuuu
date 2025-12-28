@@ -438,13 +438,31 @@ export const Builder: React.FC<BuilderProps> = ({ menuId, onBack, onSave, initia
         </MotionDiv>
 
         <div className="flex-1 bg-slate-200/40 p-4 lg:p-12 overflow-hidden flex flex-col items-center justify-center relative">
-           <div className="absolute top-6 flex gap-4 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-xl z-20">
-              <button onClick={() => updateUiState({ previewDevice: 'desktop' })} className={`p-2.5 rounded-xl transition-all ${uiState.previewDevice === 'desktop' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}><Monitor className="w-5 h-5" /></button>
-              <button onClick={() => updateUiState({ previewDevice: 'mobile' })} className={`p-2.5 rounded-xl transition-all ${uiState.previewDevice === 'mobile' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}><Smartphone className="w-5 h-5" /></button>
+           <div className="absolute top-6 flex gap-2 bg-white/90 backdrop-blur-xl p-1.5 rounded-2xl border border-white/50 shadow-xl z-20">
+              <button 
+                onClick={() => updateUiState({ previewDevice: 'desktop' })} 
+                className={`p-3 rounded-xl transition-all duration-300 flex items-center gap-2 ${uiState.previewDevice === 'desktop' ? 'bg-slate-900 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                title="Desktop View"
+              >
+                <Monitor className="w-5 h-5" />
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${uiState.previewDevice === 'desktop' ? 'block' : 'hidden'}`}>Desktop</span>
+              </button>
+              <button 
+                onClick={() => updateUiState({ previewDevice: 'mobile' })} 
+                className={`p-3 rounded-xl transition-all duration-300 flex items-center gap-2 ${uiState.previewDevice === 'mobile' ? 'bg-slate-900 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                title="Mobile View"
+              >
+                <Smartphone className="w-5 h-5" />
+                 <span className={`text-[10px] font-bold uppercase tracking-wider ${uiState.previewDevice === 'mobile' ? 'block' : 'hidden'}`}>Mobile</span>
+              </button>
            </div>
            
-           <div className={`transition-all duration-700 bg-white shadow-brutal relative overflow-hidden border border-slate-300 ${uiState.previewDevice === 'mobile' ? 'w-full max-w-[390px] h-full max-h-[844px] rounded-[3.5rem] border-[12px] border-slate-950 shadow-2xl' : 'w-full h-full rounded-[2.5rem]'}`}>
-              <div id="menu-capture-area" className="w-full h-full overflow-hidden">
+           <div className={`transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-white shadow-2xl relative overflow-hidden ${uiState.previewDevice === 'mobile' ? 'w-[390px] h-[844px] rounded-[3rem] border-[14px] border-slate-950 ring-4 ring-slate-950/10' : 'w-full h-full rounded-[2rem] border border-slate-200'}`}>
+              
+              {/* Mobile Notch Simulation */}
+              <div className={`absolute top-0 left-1/2 -translate-x-1/2 h-7 w-40 bg-slate-950 rounded-b-2xl z-50 transition-all duration-500 ${uiState.previewDevice === 'mobile' ? 'translate-y-0' : '-translate-y-full'}`} />
+              
+              <div id="menu-capture-area" className="w-full h-full overflow-hidden bg-white">
                 <MenuPreview menu={{ ...menuData, id: 'preview', createdAt: 0 } as Menu} />
               </div>
            </div>

@@ -16,27 +16,24 @@ root.render(
 );
 
 /**
- * Robustná registrácia Service Workera pre PWA funkcionalitu.
- * Vo vývojovom režime (development) sa chyby potláčajú, v produkcii logujú ticho.
+ * Service Worker Registration for PWA
  */
 const registerSW = () => {
   if ('serviceWorker' in navigator) {
-    const isProd = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-    
-    if (isProd) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((registration) => {
-            console.debug('Luxury Menu Builder SW registered:', registration.scope);
-          })
-          .catch((err) => {
-            // Tichý error handling pre dev prostredie
-            if (window.location.protocol === 'https:') {
-              console.warn('SW registration failed:', err);
-            }
-          });
-      });
-    }
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((registration) => {
+          // Registration was successful
+          // Fix: Property 'env' does not exist on type 'ImportMeta'
+          if ((import.meta as any).env?.DEV) {
+            console.debug('ServiceWorker registration successful with scope: ', registration.scope);
+          }
+        })
+        .catch((err) => {
+          // registration failed :(
+          console.warn('ServiceWorker registration failed: ', err);
+        });
+    });
   }
 };
 

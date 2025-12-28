@@ -1,4 +1,3 @@
-
 import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
@@ -15,8 +14,10 @@ interface State {
  * Robustný Error Boundary s presným typovaním pre state a props.
  * Zachytáva neočakávané chyby pri renderovaní a poskytuje luxusný fallback.
  */
-// Fix: Using React.Component explicitly ensures that 'props' and 'state' are correctly typed and inherited within the class instance.
 export class ErrorBoundary extends React.Component<Props, State> {
+  // Explicitly declare props to avoid TS errors in strict environments
+  declare props: Readonly<Props>;
+
   public state: State = {
     hasError: false
   };
@@ -57,7 +58,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Accessing children from the props property which is now correctly inherited. Added a fallback to null for safe rendering.
     return this.props.children || null;
   }
 }

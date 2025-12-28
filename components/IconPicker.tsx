@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { iconMap, iconCategories } from '../utils/icons';
-import { Search, X, Smile, Filter, Loader2 } from 'lucide-react';
+import { Search, X, Smile, Filter } from 'lucide-react';
 
 interface IconPickerProps {
   selectedIcon?: string;
@@ -11,9 +12,8 @@ interface IconPickerProps {
 }
 
 /**
- * Optimized IconPicker component.
- * When used with React.lazy, the heavy Lucide icon library (via iconMap)
- * is only loaded when the picker is actually needed.
+ * Optimized IconPicker component with Lazy Loading (Infinite Scroll).
+ * Only renders icons as they come into the viewport to improve performance.
  */
 export const IconPicker: React.FC<IconPickerProps> = ({ 
   selectedIcon, 
@@ -24,15 +24,32 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(48); // Initial batch size (approx 8 rows)
+  
   const pickerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reset search on close
+  // Reset search and visible limit on close or open
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm('');
       setActiveCategory(null);
+    } else {
+      // Reset limit when opening to ensure clean state
+      setVisibleLimit(48);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
     }
   }, [isOpen]);
+
+  // Reset visible limit when filter changes
+  useEffect(() => {
+    setVisibleLimit(48);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [searchTerm, activeCategory]);
 
   // Handle outside clicks
   useEffect(() => {
@@ -67,6 +84,22 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 
     return result;
   }, [searchTerm, activeCategory]);
+
+  // Infinite Scroll Handler
+  const handleScroll = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    
+    // Load more when scrolled near the bottom (100px threshold)
+    if (scrollHeight - scrollTop - clientHeight < 100) {
+      setVisibleLimit(prev => {
+        // Only update if we have more icons to show
+        if (prev >= filteredIcons.length) return prev;
+        return Math.min(prev + 48, filteredIcons.length);
+      });
+    }
+  }, [filteredIcons.length]);
 
   if (!isOpen) return null;
 
@@ -155,10 +188,14 @@ export const IconPicker: React.FC<IconPickerProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="overflow-y-auto p-4 bg-white scrollbar-hide flex-1 min-h-[200px]">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="overflow-y-auto p-4 bg-white scrollbar-hide flex-1 min-h-[200px]"
+      >
         {filteredIcons.length > 0 ? (
           <div className="grid grid-cols-6 gap-2">
-            {filteredIcons.map(name => renderIconBtn(name))}
+            {filteredIcons.slice(0, visibleLimit).map(name => renderIconBtn(name))}
           </div>
         ) : (
           <div className="py-16 text-center text-xs text-slate-400 flex flex-col items-center gap-4">
